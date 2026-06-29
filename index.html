@@ -39,14 +39,9 @@
                 <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Lowest Completed Region</p>
                 <h3 id="lowestRegion" class="text-1xl font-bold text-rose-400 mt-1">Calculating...</h3>
             </div>
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg flex justify-between items-center">
-                <div class="space-y-1">
-                    <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Overall Week Compliance</p>
-                    <h3 id="totalPms" class="text-1xl font-bold text-blue-400">0%</h3>
-                </div>
-                <div class="w-32 h-12 relative">
-                    <canvas id="sparklineChart"></canvas>
-                </div>
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Overall Week Compliance</p>
+                <h3 id="totalPms" class="text-1xl font-bold text-blue-400 mt-1">0%</h3>
             </div>
         </section>
 
@@ -58,13 +53,20 @@
                 </div>
                 <div class="h-64 relative"><canvas id="regionChart"></canvas></div>
             </div>
+            
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
                 <h3 class="text-md font-semibold text-white mb-2">PM Compliance Rate by Region (%)</h3>
                 <div class="h-64 relative"><canvas id="complianceRateChart"></canvas></div>
             </div>
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-6 shadow-lg">
+
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
                 <h3 class="text-md font-semibold text-white mb-2">Non-Compliance Root Causes (RCA)</h3>
                 <div class="h-64 relative"><canvas id="rcaChart"></canvas></div>
+            </div>
+
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
+                <h3 class="text-md font-semibold text-white mb-2">Weekly Compliance Trend (Last 4 Weeks)</h3>
+                <div class="h-64 relative"><canvas id="trendChart"></canvas></div>
             </div>
         </section>
 
@@ -95,6 +97,9 @@
     </main>
 
     <script>
+        // 🛠️ REGISTER THE DATALABELS PLUGIN GLOBALLY TO CHART.JS
+        Chart.register(ChartDataLabels);
+
         // ⚠️ YOUR GOOGLE APPS SCRIPT WEB APP URL:
         const API_URL = "https://script.google.com/macros/s/AKfycbzanFzLTeJQKaG7uPXTA12BNKaxiqJ7UfJ3sqQv02JYRo2BW1w63UDT1erCi6iDo3hlUQ/exec";
 
@@ -102,9 +107,8 @@
         let regionChartContext = null;
         let complianceChartContext = null;
         let rcaChartContext = null;
-        let sparklineChartContext = null;
+        let trendChartContext = null;
         
-        // State Variable to hold active clicked filter values
         let selectedRegionFilter = null; 
         let uniqueWeeksChronological = [];
 
@@ -158,14 +162,12 @@
             });
         }
 
-        // Dropdown changes trigger a filter clear to prevent view mismatches
         function resetRegionFilterAndRefresh() {
             selectedRegionFilter = null;
             document.getElementById('activeFilterIndicator').classList.add('hidden');
             updateDashboardVisuals();
         }
 
-        // Resets the table cross-filter explicitly
         function clearActiveRegionFilter() {
             selectedRegionFilter = null;
             document.getElementById('activeFilterIndicator').classList.add('hidden');
@@ -191,8 +193,8 @@
             
             document.getElementById('totalPms').innerText = `${globalPercentage}% (${globalDoneCount}/${globalTotalPlanned})`;
 
-            // 📈 UPGRADE 1: GENERATE SPARKLINE TREND GRAPH (Last 4 active weeks layout calculation)
-            generateSparklineTrend(activeWeek);
+            // 📈 GENERATE HISTORICAL TREND LINE CHART WITH VISIBLE LABELS
+            generateDetailedTrendChart(activeWeek);
 
             const discreteRegions = [...new Set(filteredSet.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
             const regionDoneCounts = {};
@@ -245,13 +247,11 @@
                 return '#3b82f6';  
             });
 
-            // 🎯 UPGRADE 4: INTERACTIVE CROSS FILTERING HANDLERS
             const chartClickHandler = function(event, activeElements, chartInstance) {
                 if (activeElements && activeElements.length > 0) {
                     const dataIndex = activeElements[0].index;
                     const clickedRegion = chartInstance.data.labels[dataIndex];
                     
-                    // Toggle execution state: click active region twice to clear out the filter
                     if (selectedRegionFilter === clickedRegion) {
                         selectedRegionFilter = null;
                         document.getElementById('activeFilterIndicator').classList.add('hidden');
@@ -260,7 +260,7 @@
                         document.getElementById('filteredRegionName').innerText = clickedRegion;
                         document.getElementById('activeFilterIndicator').classList.remove('hidden');
                     }
-                    renderTableRowsOnly(); // Re-render the lower table dynamically without destroying graphs
+                    renderTableRowsOnly(); 
                 }
             };
 
@@ -268,7 +268,6 @@
             if (regionChartContext) regionChartContext.destroy();
             regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
-                plugins: [ChartDataLabels],
                 data: {
                     labels: regionLabels,
                     datasets: [{ label: 'Total PMs Done', data: regionDoneValues, backgroundColor: barColors, borderRadius: 6, barThickness: 20 }]
@@ -300,7 +299,6 @@
             if (complianceChartContext) complianceChartContext.destroy();
             complianceChartContext = new Chart(document.getElementById('complianceRateChart'), {
                 type: 'bar',
-                plugins: [ChartDataLabels],
                 data: {
                     labels: regionLabels,
                     datasets: [{ label: 'Compliance Rate (%)', data: regionRatePercentages, backgroundColor: '#6366f1', borderRadius: 6, barThickness: 20 }]
@@ -348,7 +346,6 @@
             if (rcaChartContext) rcaChartContext.destroy();
             rcaChartContext = new Chart(document.getElementById('rcaChart'), {
                 type: 'doughnut',
-                plugins: [ChartDataLabels],
                 data: {
                     labels: rcaLabels.length ? rcaLabels : ['100% Operational Compliance'],
                     datasets: [{ data: rcaDataValues.length ? rcaDataValues : [1], backgroundColor: rcaDataValues.length ? ['#f59e0b', '#ef4444', '#a855f7', '#06b6d4'] : ['#1e293b'], borderWidth: 0 }]
@@ -371,22 +368,18 @@
                 }
             });
 
-            // Initialize Table Render Execution Pass
             renderTableRowsOnly();
         }
 
-        // Subroutine function designed to isolate data sets independently
         function renderTableRowsOnly() {
             const selectorElement = document.getElementById('weekSelect');
             const activeWeek = parseInt(selectorElement.value, 10);
             
-            // Step 1: Filter raw set base down to target operational week frame
             let rowsToRender = fullDatabaseRecords.filter(row => {
                 if(row.week === undefined || row.week === null || row.week === "") return false;
                 return parseInt(String(row.week).replace(/\D/g, ""), 10) === activeWeek;
             });
 
-            // Step 2: Apply Chart Click Region Cross-Filter logic if state is populated
             if (selectedRegionFilter !== null) {
                 rowsToRender = rowsToRender.filter(row => row.region && row.region.trim() === selectedRegionFilter);
             }
@@ -403,29 +396,27 @@
                 const rcaDisplay = (rcaValue.trim() !== "" && rcaValue.trim() !== "-") ? rcaValue.trim() : "-";
                 
                 tr.innerHTML = `
-                    <td class="px-6 py-1.2 font-bold text-white">${row.equipment_no || '-'}</td>
-                    <td class="px-6 py-1.2">${row.pm_type || '-'}</td>
-                    <td class="px-6 py-1.2">${row.location || '-'}</td>
-                    <td class="px-6 py-1.2 text-slate-400">${row.region || '-'}</td>
-                    <td class="px-6 py-1.2"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
-                    <td class="px-6 py-1.2 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
+                    <td class="px-6 py-1.5 font-bold text-white">${row.equipment_no || '-'}</td>
+                    <td class="px-6 py-1.5">${row.pm_type || '-'}</td>
+                    <td class="px-6 py-1.5">${row.location || '-'}</td>
+                    <td class="px-6 py-1.5 text-slate-400">${row.region || '-'}</td>
+                    <td class="px-6 py-1.5"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
+                    <td class="px-6 py-1.5 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
                 `;
                 tableBody.appendChild(tr);
             });
         }
 
-        // Subroutine function tracking historical weekly trends
-        function generateSparklineTrend(currentSelectedWeek) {
-            // Find current active index inside unique operational weeks array checklist
+        // Expanded Subroutine function to generate a fully labeled Trend Chart with explicit dataset values
+        function generateDetailedTrendChart(currentSelectedWeek) {
             const currentIdx = uniqueWeeksChronological.indexOf(currentSelectedWeek);
             if (currentIdx === -1) return;
 
-            // Gather the last 4 visible active weeks leading up to the current target selection
             const startIdx = Math.max(0, currentIdx - 3);
             const lookbackWeeks = uniqueWeeksChronological.slice(startIdx, currentIdx + 1);
 
-            const sparklineLabels = [];
-            const sparklineData = [];
+            const trendLabels = [];
+            const trendData = [];
 
             lookbackWeeks.forEach(wk => {
                 const weekDataset = fullDatabaseRecords.filter(row => {
@@ -436,23 +427,25 @@
                 const totalCount = weekDataset.length;
                 const rate = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
                 
-                sparklineLabels.push(`Wk ${wk}`);
-                sparklineData.push(rate);
+                trendLabels.push(`Week ${wk}`);
+                trendData.push(rate);
             });
 
-            if (sparklineChartContext) sparklineChartContext.destroy();
-            sparklineChartContext = new Chart(document.getElementById('sparklineChart'), {
+            if (trendChartContext) trendChartContext.destroy();
+            trendChartContext = new Chart(document.getElementById('trendChart'), {
                 type: 'line',
                 data: {
-                    labels: sparklineLabels,
+                    labels: trendLabels,
                     datasets: [{
-                        data: sparklineData,
-                        borderColor: '#3b82f6', // Match blue style lines
-                        borderWidth: 2,
-                        pointRadius: lookbackWeeks.length === 1 ? 3 : 1.5, // Dot highlights look better on single indices
+                        label: 'Overall Compliance',
+                        data: trendData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        pointRadius: 5,
                         pointBackgroundColor: '#60a5fa',
-                        tension: 0.2, // Clean curved aesthetics
-                        fill: false
+                        tension: 0.15,
+                        fill: true
                     }]
                 },
                 options: {
@@ -460,11 +453,30 @@
                     maintainAspectRatio: false,
                     plugins: { 
                         legend: { display: false },
-                        datalabels: { display: false } // Hide chart values overlay to prevent cluttering tiny boxes
+                        datalabels: { 
+                            display: true,
+                            align: 'top',
+                            anchor: 'center',
+                            color: '#ffffff',
+                            font: { weight: 'bold', size: 11 },
+                            offset: 6,
+                            formatter: function(value) { return value + '%'; }
+                        }
                     },
                     scales: {
-                        x: { display: false }, // Completely strip out axes labels and canvas borders
-                        y: { display: false, min: 0, max: 100 }
+                        y: { 
+                            beginAtZero: true, 
+                            max: 115, 
+                            grid: { color: '#334155' }, 
+                            ticks: { 
+                                color: '#94a3b8',
+                                callback: function(value) { if (value <= 100) return value + '%'; }
+                            } 
+                        },
+                        x: { 
+                            grid: { color: '#334155' }, 
+                            ticks: { color: '#94a3b8', font: { size: 10 } } 
+                        }
                     }
                 }
             });
