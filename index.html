@@ -20,7 +20,7 @@
             <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer">
                 <option value="21">Week 21</option>
                 <option value="22">Week 22</option>
-                <option value="23" selected>Week 23 (June 06 - June 12, 2026)</option>
+                <option value="23" selected>Week 23</option>
                 <option value="24">Week 24</option>
                 <option value="25">Week 25</option>
             </select>
@@ -36,22 +36,22 @@
 
         <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Highest Compliance Region</p>
+                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Highest Completed Region</p>
                 <h3 id="highestRegion" class="text-2xl font-bold text-emerald-400 mt-1">Calculating...</h3>
             </div>
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Lowest Compliance Region</p>
+                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Lowest Completed Region</p>
                 <h3 id="lowestRegion" class="text-2xl font-bold text-rose-400 mt-1">Calculating...</h3>
             </div>
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Total Work Orders (Selected Week)</p>
+                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Total Entries (Selected Week)</p>
                 <h3 id="totalPms" class="text-2xl font-bold text-white mt-1">0</h3>
             </div>
         </section>
 
         <section class="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <h3 class="text-md font-semibold text-white mb-2">PM Compliance Rate by Region (%)</h3>
+                <h3 class="text-md font-semibold text-white mb-2">Total PMs Done by Region (Count)</h3>
                 <div class="h-64 relative"><canvas id="regionChart"></canvas></div>
             </div>
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-2 shadow-lg">
@@ -83,7 +83,7 @@
     </main>
 
     <script>
-        // ⚠️ PASTE YOUR BRAND NEW GOOGLE APPS SCRIPT WEB APP URL HERE:
+        // ⚠️ PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
         const API_URL = "https://script.google.com/macros/s/AKfycbywNZHHVo2UUdy4eME7yudjoCNEGONSxV1oz8T7y1p3pGcU9m_AzZVadcMUoJbvDobHmA/exec";
 
         let fullDatabaseRecords = [];
@@ -94,8 +94,6 @@
             try {
                 const response = await fetch(API_URL);
                 fullDatabaseRecords = await response.json();
-                
-                console.log("Raw Data Sample Loaded From Google Sheet:", fullDatabaseRecords[0]); // Debug log
                 
                 document.getElementById('loadingOverlay').classList.add('hidden');
                 document.getElementById('dashboardMain').classList.remove('hidden');
@@ -109,89 +107,98 @@
 
         function updateDashboardVisuals() {
             const activeWeek = parseInt(document.getElementById('weekSelect').value);
-            
-            // Loose comparison tool to catch string-integers gracefully
             const filteredSet = fullDatabaseRecords.filter(row => parseInt(row.week) === activeWeek);
             
-            console.log(`Filtered items for Week ${activeWeek}:`, filteredSet.length); // Debug log
-
             document.getElementById('totalPms').innerText = `${filteredSet.length} Row Entries`;
 
-            // 1. DYNAMIC REGION INITIALIZATION
+            // 1. GATHER UNIQUE REGIONS DYNAMICALLY
             const discreteRegions = [...new Set(fullDatabaseRecords.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
-            const regionStats = {};
-            discreteRegions.forEach(reg => regionStats[reg] = { scheduled: 0, compliant: 0 });
+            
+            // 2. INITIALIZE TRACKING COUTNERS FOR PURE COUNTING
+            const regionCounts = {};
+            discreteRegions.forEach(reg => {
+                regionCounts[reg] = 0;
+            });
 
-            // 2. MATH CALCULATIONS
+            // 3. TALLY COUNTS WHERE STATUS IS EXACTLY "DONE"
             filteredSet.forEach(item => {
                 const cleanRegion = item.region ? item.region.trim() : "";
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
 
-                if (regionStats[cleanRegion] !== undefined) {
-                    regionStats[cleanRegion].scheduled++;
-                    if (cleanStatus === "COMPLIANT") {
-                        regionStats[cleanRegion].compliant++;
-                    }
+                if (cleanStatus === "DONE" && regionCounts[cleanRegion] !== undefined) {
+                    regionCounts[cleanRegion]++;
                 }
             });
 
             const regionLabels = [];
-            const regionPercentages = [];
-            let minScore = 101, maxScore = -1;
-            let lowestReg = 'N/A', highestReg = 'N/A';
+            const regionDataValues = [];
+            let maxCount = -1, minCount = 999999;
+            let highestReg = 'N/A', lowestReg = 'N/A';
 
             discreteRegions.forEach(reg => {
-                const stats = regionStats[reg];
-                // Make sure we only show regions that actually have work scheduled this week
-                if (stats.scheduled > 0) {
-                    const pct = Math.round((stats.compliant / stats.scheduled) * 100);
-                    regionLabels.push(reg);
-                    regionPercentages.push(pct);
+                const count = regionCounts[reg];
+                regionLabels.push(reg);
+                regionDataValues.push(count);
 
-                    if (pct < minScore) { minScore = pct; lowestReg = reg; }
-                    if (pct > maxScore) { maxScore = pct; highestReg = reg; }
-                } else {
-                    // Fallback to preserve empty bar slots visible on zero-data frames
-                    regionLabels.push(reg);
-                    regionPercentages.push(0);
-                }
+                // Find top/bottom performers based on pure counts
+                if (count > maxCount) { maxCount = count; highestReg = reg; }
+                if (count < minCount) { minCount = count; lowestReg = reg; }
             });
 
-            document.getElementById('highestRegion').innerText = highestReg !== 'N/A' ? `${highestReg} (${maxScore}%)` : '0% Found';
-            document.getElementById('lowestRegion').innerText = lowestReg !== 'N/A' ? `${lowestReg} (${minScore}%)` : '0% Found';
+            // Update top metric boxes
+            document.getElementById('highestRegion').innerText = maxCount > 0 ? `${highestReg} (${maxCount} Done)` : '0 Done Found';
+            document.getElementById('lowestRegion').innerText = filteredSet.length > 0 ? `${lowestReg} (${minCount} Done)` : '0 Done Found';
 
             const barColors = regionLabels.map(label => {
-                if (lowestReg !== 'N/A' && label === lowestReg) return '#f43f5e'; // Highlight Red
-                if (highestReg !== 'N/A' && label === highestReg) return '#10b981'; // Highlight Green
-                return '#3b82f6'; // Clean electric blue default bars instead of empty gray slots
+                if (maxCount === 0) return '#3b82f6'; // Default blue if all are 0
+                if (label === lowestReg && maxCount !== minCount) return '#f43f5e'; // Highlight lowest performer in Red
+                if (label === highestReg && maxCount !== minCount) return '#10b981'; // Highlight highest performer in Green
+                return '#3b82f6'; 
             });
 
-            // 3. BAR CHART REPAINT
+            // 4. BAR CHART REPAINT (PURE RAWMETRIC COUNT)
             if (regionChartContext) regionChartContext.destroy();
             regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ data: regionPercentages, backgroundColor: barColors, borderRadius: 6, barThickness: 24 }]
+                    datasets: [{ 
+                        label: 'Total PMs Done',
+                        data: regionDataValues, 
+                        backgroundColor: barColors, 
+                        borderRadius: 6, 
+                        barThickness: 24 
+                    }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: { 
-                        y: { min: 0, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: v => v + '%' } }, 
+                        y: { 
+                            beginAtZero: true,
+                            suggestedMax: 5, // Ensures grid spacing looks nice even with small or zero counts
+                            grid: { color: '#334155' }, 
+                            ticks: { 
+                                color: '#94a3b8', 
+                                stepSize: 1, // Only displays whole numbers (no 1.5, 2.5 counts)
+                                precision: 0
+                            } 
+                        }, 
                         x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 45, minRotation: 45 } } 
                     }
                 }
             });
 
-            // 4. RCA PIE BREAKDOWN
+            // 5. RCA PIE BREAKDOWN (Aggregates anything that isn't "DONE")
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
-                const cleanRca = item.rca ? item.rca.trim() : "-";
-                if (cleanStatus !== "COMPLIANT" && cleanRca && cleanRca !== "-") {
-                    rcaTallies[cleanRca] = (rcaTallies[cleanRca] || 0) + 1;
+                const cleanRca = item.rca ? item.rca.trim() : "";
+                
+                if (cleanStatus !== "DONE") {
+                    const reason = (cleanRca === "" || cleanRca === "-") ? "Pending Review / Unspecified" : cleanRca;
+                    rcaTallies[reason] = (rcaTallies[reason] || 0) + 1;
                 }
             });
 
@@ -202,28 +209,28 @@
             rcaChartContext = new Chart(document.getElementById('rcaChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: rcaLabels.length ? rcaLabels : ['No Missed Work Orders'],
+                    labels: rcaLabels.length ? rcaLabels : ['100% Operational Compliance'],
                     datasets: [{ data: rcaDataValues.length ? rcaDataValues : [1], backgroundColor: rcaDataValues.length ? ['#f59e0b', '#ef4444', '#a855f7', '#06b6d4'] : ['#1e293b'], borderWidth: 0 }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 10 } } }, cutout: '70%' }
             });
 
-            // 5. TABLE BUILDER
+            // 6. DRAW TABLE ROWS
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             
             filteredSet.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm";
-                const isCompliant = row.status && row.status.trim().toUpperCase() === 'COMPLIANT';
+                const isDone = row.status && row.status.trim().toUpperCase() === 'DONE';
                 
                 tr.innerHTML = `
                     <td class="px-6 py-3.5 font-bold text-white">${row.equipment_no || '-'}</td>
                     <td class="px-6 py-3.5">${row.pm_type || '-'}</td>
                     <td class="px-6 py-3.5">${row.location || '-'}</td>
                     <td class="px-6 py-3.5 text-slate-400">${row.region || '-'}</td>
-                    <td class="px-6 py-3.5"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isCompliant ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Unknown'}</span></td>
-                    <td class="px-6 py-3.5 ${isCompliant ? 'text-slate-500': 'text-amber-400 font-medium'}">${row.rca || '-'}</td>
+                    <td class="px-6 py-3.5"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
+                    <td class="px-6 py-3.5 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${row.rca || '-'}</td>
                 `;
                 tableBody.appendChild(tr);
             });
