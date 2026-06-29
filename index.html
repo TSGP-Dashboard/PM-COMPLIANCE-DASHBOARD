@@ -11,19 +11,14 @@
 
     <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-50">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">Maintenance Operations Dashboard</h1>
-            <p class="text-xs text-slate-400">Live Workspace Compliance Monitoring</p>
+            <h1 class="text-2xl font-bold tracking-tight text-white">PM Compliance Dashboard</h1>
+            <p class="text-xs text-slate-400">Live PM Compliance Monitoring</p>
         </div>
         
         <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700">
             <label for="weekSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
             <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer">
-                <option value="21">Week 21</option>
-                <option value="22">Week 22</option>
-                <option value="23">Week 23</option>
-                <option value="24">Week 24</option>
-                <option value="25">Week 25</option>
-            </select>
+                </select>
         </div>
     </header>
 
@@ -84,7 +79,7 @@
 
     <script>
         // ⚠️ PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
-        const API_URL = "https://script.google.com/macros/s/AKfycbywNZHHVo2UUdy4eME7yudjoCNEGONSxV1oz8T7y1p3pGcU9m_AzZVadcMUoJbvDobHmA/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbxdspHHNdkfaBP70Wh9Hngl1N70mugD88hPkrVig4jxOFTY_ivNtNjJPbVX75vzfImLGA/exec";
 
         let fullDatabaseRecords = [];
         let regionChartContext = null;
@@ -94,6 +89,9 @@
             try {
                 const response = await fetch(API_URL);
                 fullDatabaseRecords = await response.json();
+                
+                // 🛠️ DYNAMICALLY BUILD THE WEEK OPTIONS BEFORE RENDERING VIEWS
+                buildDynamicWeekSelector();
                 
                 document.getElementById('loadingOverlay').classList.add('hidden');
                 document.getElementById('dashboardMain').classList.remove('hidden');
@@ -105,8 +103,35 @@
             }
         }
 
+        function buildDynamicWeekSelector() {
+            const selector = document.getElementById('weekSelect');
+            
+            // 1. Extract all unique week values from database array strings
+            const uniqueWeeks = [...new Set(fullDatabaseRecords.map(row => parseInt(row.week)))].filter(Boolean);
+            
+            // 2. Sort numerical order chronologically (Smallest week number to Largest)
+            uniqueWeeks.sort((a, b) => a - b);
+            
+            // 3. Clear any existing placeholders and populate options dynamically
+            selector.innerHTML = '';
+            uniqueWeeks.forEach((wk, index) => {
+                const option = document.createElement('option');
+                option.value = wk;
+                option.textContent = `Week ${wk}`;
+                
+                // Smart Feature: Automatically highlights the latest active operational week in the array list
+                if (index === uniqueWeeks.length - 1) {
+                    option.selected = true;
+                }
+                selector.appendChild(option);
+            });
+        }
+
         function updateDashboardVisuals() {
-            const activeWeek = parseInt(document.getElementById('weekSelect').value);
+            const selectorElement = document.getElementById('weekSelect');
+            if(!selectorElement.value) return; // Prevent crashes if sheet data is completely blank
+            
+            const activeWeek = parseInt(selectorElement.value);
             const filteredSet = fullDatabaseRecords.filter(row => parseInt(row.week) === activeWeek);
             
             document.getElementById('totalPms').innerText = `${filteredSet.length} Row Entries`;
@@ -116,11 +141,9 @@
             
             // 2. INITIALIZE TRACKING COUNTERS
             const regionCounts = {};
-            discreteRegions.forEach(reg => {
-                regionCounts[reg] = 0;
-            });
+            discreteRegions.forEach(reg => { regionCounts[reg] = 0; });
 
-            // 3. TALLY COUNTS (STRICTLY MATCH "DONE")
+            // 3. TALLY COUNTS
             filteredSet.forEach(item => {
                 const cleanRegion = item.region ? item.region.trim() : "";
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
@@ -154,43 +177,30 @@
                 return '#3b82f6'; 
             });
 
-            // 4. BAR CHART REPAINT (PURE RAW COUNTS ONLY)
+            // 4. BAR CHART REPAINT
             if (regionChartContext) regionChartContext.destroy();
             regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ 
-                        label: 'Total PMs Done',
-                        data: regionDataValues, 
-                        backgroundColor: barColors, 
-                        borderRadius: 6, 
-                        barThickness: 24 
-                    }]
+                    datasets: [{ label: 'Total PMs Done', data: regionDataValues, backgroundColor: barColors, borderRadius: 6, barThickness: 24 }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: { 
-                        y: { 
-                            beginAtZero: true,
-                            suggestedMax: 5,
-                            grid: { color: '#334155' }, 
-                            ticks: { color: '#94a3b8', stepSize: 1, precision: 0 } 
-                        }, 
+                        y: { beginAtZero: true, suggestedMax: 5, grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 1, precision: 0 } }, 
                         x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 45, minRotation: 45 } } 
                     }
                 }
             });
 
-            // 5. RCA PIE BREAKDOWN (Handles flexible backend object key names)
+            // 5. RCA PIE CHART BREAKDOWN
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
-                
-                // Flexible mapping check to secure variable naming schemas
-                let rawRca = item.rca || item.rca_on_non_compliance || "";
+                let rawRca = item.rca_on_non_compliance || item.rca || "";
                 const cleanRca = rawRca.trim();
                 
                 if (cleanStatus !== "DONE") {
@@ -212,7 +222,7 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 10 } } }, cutout: '70%' }
             });
 
-            // 6. DRAW TABLE ROWS WITH ROBUST RCA FIELD MAPPING
+            // 6. DRAW TABLE ROWS
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             
@@ -221,8 +231,7 @@
                 tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm";
                 const isDone = row.status && row.status.trim().toUpperCase() === 'DONE';
                 
-                // Checks both common naming conventions used by the Apps Script parser
-                let rcaValue = row.rca || row.rca_on_non_compliance || '';
+                let rcaValue = row.rca_on_non_compliance || row.rca || '';
                 const rcaDisplay = (rcaValue.trim() !== "" && rcaValue.trim() !== "-") ? rcaValue.trim() : "-";
                 
                 tr.innerHTML = `
