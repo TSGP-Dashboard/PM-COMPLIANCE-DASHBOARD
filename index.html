@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PM Compliance & Reliability Dashboard</title>
+    <title>Live PM Compliance Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -11,13 +11,13 @@
 
     <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-50">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">Maintenance Operations</h1>
-            <p class="text-xs text-slate-400">Preventive Maintenance (PM) Schedule Compliance</p>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Live Maintenance Operations</h1>
+            <p class="text-xs text-slate-400">Connected to Google Sheets Database</p>
         </div>
         
         <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700">
             <label for="weekSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
-            <select id="weekSelect" onchange="updateDashboard()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-blue-500 transition cursor-pointer">
+            <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none">
                 <option value="22">Week 22 (May 30 - June 05, 2026)</option>
                 <option value="23" selected>Week 23 (June 06 - June 12, 2026)</option>
                 <option value="24">Week 24 (June 13 - June 19, 2026)</option>
@@ -25,60 +25,45 @@
         </div>
     </header>
 
-    <main class="p-6 max-w-7xl mx-auto space-y-6">
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center z-50 transition-opacity duration-300">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p class="text-slate-400 font-medium">Fetching Sheet Records...</p>
+    </div>
 
-        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex items-center justify-between shadow-lg shadow-slate-950/20">
+    <main class="p-6 max-w-7xl mx-auto space-y-6 hidden" id="dashboardMain">
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Highest Compliance Region</p>
                     <h3 id="highestRegion" class="text-2xl font-bold text-emerald-400 mt-1">Calculating...</h3>
                 </div>
-                <div class="p-3 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xl font-bold">↑</div>
             </div>
-
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex items-center justify-between shadow-lg shadow-slate-950/20">
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Lowest Compliance Region</p>
                     <h3 id="lowestRegion" class="text-2xl font-bold text-rose-400 mt-1">Calculating...</h3>
                 </div>
-                <div class="p-3 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xl font-bold">↓</div>
             </div>
-
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex items-center justify-between shadow-lg shadow-slate-950/20 md:col-span-2 lg:col-span-1">
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex items-center justify-between">
                 <div>
                     <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Total Scheduled PMs</p>
-                    <h3 id="totalPms" class="text-2xl font-bold text-white mt-1">0 Work Orders</h3>
+                    <h3 id="totalPms" class="text-2xl font-bold text-white mt-1">0</h3>
                 </div>
-                <div class="p-3 rounded-lg bg-slate-700 text-slate-300 text-sm font-semibold">MTD</div>
             </div>
         </section>
 
         <section class="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <div class="mb-4">
-                    <h3 class="text-md font-semibold text-white">PM Compliance Rate by Region (%)</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Automated color flags: <span class="text-emerald-400 font-medium">Green = Top Performers</span> / <span class="text-rose-400 font-medium">Red = Critical Care</span></p>
-                </div>
-                <div class="h-64 relative">
-                    <canvas id="regionChart"></canvas>
-                </div>
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3">
+                <h3 class="text-md font-semibold text-white mb-4">PM Compliance Rate by Region (%)</h3>
+                <div class="h-64"><canvas id="regionChart"></canvas></div>
             </div>
-
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-2 shadow-lg">
-                <h3 class="text-md font-semibold text-white mb-4">RCA on Non-Compliance (Reasons Breakdown)</h3>
-                <div class="h-64 relative">
-                    <canvas id="rcaChart"></canvas>
-                </div>
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-2">
+                <h3 class="text-md font-semibold text-white mb-4">RCA on Non-Compliance</h3>
+                <div class="h-64"><canvas id="rcaChart"></canvas></div>
             </div>
         </section>
 
-        <section class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-                <div>
-                    <h3 class="text-md font-semibold text-white">Asset-Level PM Tracking Log</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Filtered work orders for the selected date window</p>
-                </div>
-            </div>
+        <section class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm text-slate-300">
                     <thead class="bg-slate-900/40 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-700">
@@ -91,124 +76,101 @@
                             <th class="px-6 py-3.5">RCA on Non-Compliance</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-700/50">
-                        </tbody>
+                    <tbody id="tableBody" class="divide-y divide-slate-700/50"></tbody>
                 </table>
             </div>
         </section>
     </main>
 
     <script>
-        // Interactive Database Mock Data matching your structure exactly
-        const mockDatabase = [
-            // --- WEEK 22 DATA ---
-            { week: 22, equipment_no: "PUMP-012", pm_type: "Monthly Lubrication", location: "Boiler Room 1", region: "North", status: "Compliant", rca: "-" },
-            { week: 22, equipment_no: "COMP-401", pm_type: "Quarterly Calibration", location: "Main Plant Air", region: "North", status: "Compliant", rca: "-" },
-            { week: 22, equipment_no: "CONV-088", pm_type: "Weekly Belt Tension", location: "Packaging Line B", region: "South", status: "Non-Compliant", rca: "Labor Shortage" },
-            { week: 22, equipment_no: "HVAC-102", pm_type: "Annual Filter Swap", location: "Admin Roof", region: "East", status: "Compliant", rca: "-" },
-            { week: 22, equipment_no: "ROBOT-05", pm_type: "Monthly Inspection", location: "Welding Cell A", region: "West", status: "Non-Compliant", rca: "Production Overtime" },
+        // ⚠️ PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
+        const API_URL = "https://script.google.com/macros/s/AKfycbxAhP5Woyo5brV7lryuSnM9MGAy5zdZH7H10gk7l26WhEO1rMD8SofAgIA4hd4zDqiUuA/exec";
 
-            // --- WEEK 23 DATA (Target Window: June 06 - June 12, 2026) ---
-            { week: 23, equipment_no: "COMP-201", pm_type: "Quarterly Overhaul", location: "Main Compressor Block", region: "North", status: "Compliant", rca: "-" },
-            { week: 23, equipment_no: "PUMP-105", pm_type: "Monthly Seals Check", location: "Water Utility Shed", region: "North", status: "Compliant", rca: "-" },
-            { week: 23, equipment_no: "CONV-102", pm_type: "Weekly Guide Rails", location: "Packaging Line A", region: "North", status: "Non-Compliant", rca: "Parts Shortage" },
-            { week: 23, equipment_no: "FAN-990", pm_type: "Semi-Annual Bearing Run", location: "Kiln Vent Exhaust", region: "South", status: "Compliant", rca: "-" },
-            { week: 23, equipment_no: "GEAR-331", pm_type: "Monthly Oil Analysis", location: "Milling Floor 2", region: "South", status: "Non-Compliant", rca: "Labor Shortage" },
-            { week: 23, equipment_no: "PUMP-402", pm_type: "Quarterly Alignment", location: "Chilled Loop Tower", region: "East", status: "Compliant", rca: "-" },
-            { week: 23, equipment_no: "VALVE-112", pm_type: "Weekly Actuator Test", location: "Chemical Treatment Site", region: "East", status: "Compliant", rca: "-" },
-            { week: 23, equipment_no: "CHILL-01", pm_type: "Annual Primary Flush", location: "Utility Building 3", region: "East", status: "Non-Compliant", rca: "Equipment Access Denied" },
-            { week: 23, equipment_no: "ROBOT-11", pm_type: "Monthly Controller Diagnostic", location: "Assembly Line 4", region: "West", status: "Non-Compliant", rca: "Parts Shortage" },
-            { week: 23, equipment_no: "CONV-105", pm_type: "Weekly Chain Greasing", location: "Sorting Bay 1", region: "West", status: "Non-Compliant", rca: "Labor Shortage" },
-            { week: 23, equipment_no: "MOT-044", pm_type: "Monthly VFD Calibration", location: "Crusher Drive", region: "West", status: "Compliant", rca: "-" },
-
-            // --- WEEK 24 DATA ---
-            { week: 24, equipment_no: "PUMP-015", pm_type: "Monthly Lubrication", location: "Boiler Room 2", region: "North", status: "Non-Compliant", rca: "Parts Shortage" },
-            { week: 24, equipment_no: "COMP-402", pm_type: "Quarterly Calibration", location: "Main Plant Air", region: "South", status: "Compliant", rca: "-" },
-            { week: 24, equipment_no: "CONV-089", pm_type: "Weekly Belt Tension", location: "Packaging Line C", region: "East", status: "Compliant", rca: "-" },
-            { week: 24, equipment_no: "ROBOT-06", pm_type: "Monthly Inspection", location: "Welding Cell B", region: "West", status: "Compliant", rca: "-" }
-        ];
-
-        // Keep pointers to chart objects for destruction/re-instantiation
+        let fullDatabaseRecords = [];
         let regionChartContext = null;
         let rcaChartContext = null;
 
-        function updateDashboard() {
-            const activeWeek = parseInt(document.getElementById('weekSelect').value);
-            const filteredSet = mockDatabase.filter(row => row.week === activeWeek);
+        // Fetch data array directly from Apps Script deployment on load
+        async function fetchLiveSheetData() {
+            try {
+                const response = await fetch(API_URL);
+                fullDatabaseRecords = await response.json();
+                
+                // Hide loader overlay, show UI
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                document.getElementById('dashboardMain').classList.remove('hidden');
+                
+                // Run computation
+                updateDashboardVisuals();
+            } catch (error) {
+                console.error("Data ingestion failure:", error);
+                alert("Failed to pull data from Apps Script. Verify your Web App URL deployment permissions.");
+            }
+        }
 
-            // Update Total Scheduled Count Badge
+        function updateDashboardVisuals() {
+            const activeWeek = parseInt(document.getElementById('weekSelect').value);
+            const filteredSet = fullDatabaseRecords.filter(row => row.week === activeWeek);
+
             document.getElementById('totalPms').innerText = `${filteredSet.length} Work Orders`;
 
-            // --- 1. REGIONAL METRIC AGGREGATION ---
-            const discreteRegions = [...new Set(mockDatabase.map(row => row.region))];
+            // 1. REGIONAL CALCULATIONS
+            const discreteRegions = [...new Set(fullDatabaseRecords.map(row => row.region))].filter(Boolean);
             const regionStats = {};
             discreteRegions.forEach(reg => regionStats[reg] = { scheduled: 0, compliant: 0 });
 
             filteredSet.forEach(item => {
-                regionStats[item.region].scheduled++;
-                if (item.status === "Compliant") {
-                    regionStats[item.region].compliant++;
+                if(regionStats[item.region]) {
+                    regionStats[item.region].scheduled++;
+                    if (item.status.trim().toLowerCase() === "compliant") regionStats[item.region].compliant++;
                 }
             });
 
             const regionLabels = [];
             const regionPercentages = [];
-            let minimumScore = 101, maximumScore = -1;
-            let lowestRegionName = 'N/A', highestRegionName = 'N/A';
+            let minScore = 101, maxScore = -1;
+            let lowestReg = 'N/A', highestReg = 'N/A';
 
             discreteRegions.forEach(reg => {
                 const stats = regionStats[reg];
-                const finalPercentage = stats.scheduled > 0 ? Math.round((stats.compliant / stats.scheduled) * 100) : 0;
-                
-                regionLabels.push(reg);
-                regionPercentages.push(finalPercentage);
-
                 if (stats.scheduled > 0) {
-                    if (finalPercentage < minimumScore) { minimumScore = finalPercentage; lowestRegionName = reg; }
-                    if (finalPercentage > maximumScore) { maximumScore = finalPercentage; highestRegionName = reg; }
+                    const pct = Math.round((stats.compliant / stats.scheduled) * 100);
+                    regionLabels.push(reg);
+                    regionPercentages.push(pct);
+
+                    if (pct < minScore) { minScore = pct; lowestReg = reg; }
+                    if (pct > maxScore) { maxScore = pct; highestReg = reg; }
                 }
             });
 
-            // Set Top Ribbon Metric Cards
-            document.getElementById('highestRegion').innerText = highestRegionName !== 'N/A' ? `${highestRegionName} (${maximumScore}%)` : 'N/A';
-            document.getElementById('lowestRegion').innerText = lowestRegionName !== 'N/A' ? `${lowestRegionName} (${minimumScore}%)` : 'N/A';
+            document.getElementById('highestRegion').innerText = highestReg !== 'N/A' ? `${highestReg} (${maxScore}%)` : 'N/A';
+            document.getElementById('lowestRegion').innerText = lowestReg !== 'N/A' ? `${lowestReg} (${minScore}%)` : 'N/A';
 
-            // Establish color arrays to highlight highest/lowest performance
-            const dynamicallyGeneratedColors = regionLabels.map(label => {
-                if (label === lowestRegionName) return '#f43f5e';  // Rose Red for Lowest
-                if (label === highestRegionName) return '#10b981'; // Emerald Green for Highest
-                return '#64748b';                                  // Slate Gray for Neutral
+            const barColors = regionLabels.map(label => {
+                if (label === lowestReg) return '#f43f5e';
+                if (label === highestReg) return '#10b981';
+                return '#64748b';
             });
 
-            // Re-render the Regional Compliance Chart
             if (regionChartContext) regionChartContext.destroy();
-            const ctxRegion = document.getElementById('regionChart').getContext('2d');
-            regionChartContext = new Chart(ctxRegion, {
+            regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{
-                        data: regionPercentages,
-                        backgroundColor: dynamicallyGeneratedColors,
-                        borderRadius: 8,
-                        barThickness: 32
-                    }]
+                    datasets: [{ data: regionPercentages, backgroundColor: barColors, borderRadius: 6, barThickness: 28 }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
-                    scales: {
-                        y: { min: 0, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: val => val + '%' } },
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { weight: 'bold' } } }
-                    }
+                    scales: { y: { min: 0, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }
                 }
             });
 
-            // --- 2. RCA (ROOT CAUSE ANALYSIS) METRIC AGGREGATION ---
+            // 2. RCA CALCULATIONS
             const rcaTallies = {};
             filteredSet.forEach(item => {
-                if (item.status === "Non-Compliant" && item.rca !== "-") {
+                if (item.status.trim().toLowerCase() !== "compliant" && item.rca && item.rca !== "-") {
                     rcaTallies[item.rca] = (rcaTallies[item.rca] || 0) + 1;
                 }
             });
@@ -216,59 +178,37 @@
             const rcaLabels = Object.keys(rcaTallies);
             const rcaDataValues = Object.values(rcaTallies);
 
-            // Re-render the RCA Doughnut Chart
             if (rcaChartContext) rcaChartContext.destroy();
-            const ctxRca = document.getElementById('rcaChart').getContext('2d');
-            rcaChartContext = new Chart(ctxRca, {
+            rcaChartContext = new Chart(document.getElementById('rcaChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: rcaLabels.length ? rcaLabels : ['100% Fully Compliant'],
-                    datasets: [{
-                        data: rcaDataValues.length ? rcaDataValues : [1],
-                        backgroundColor: rcaDataValues.length ? ['#f59e0b', '#ef4444', '#a855f7', '#3b82f6'] : ['#1e293b'],
-                        borderWidth: 0
-                    }]
+                    labels: rcaLabels.length ? rcaLabels : ['No Failures'],
+                    datasets: [{ data: rcaDataValues.length ? rcaDataValues : [1], backgroundColor: rcaDataValues.length ? ['#f59e0b', '#ef4444', '#a855f7', '#3b82f6'] : ['#1e293b'], borderWidth: 0 }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'bottom', labels: { color: '#94a3b8', padding: 14, font: { size: 11 } } }
-                    },
-                    cutout: '70%'
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } }, cutout: '75%' }
             });
 
-            // --- 3. DYNAMIC DATA TABLE RENDERING ---
-            const dynamicTableBody = document.getElementById('tableBody');
-            dynamicTableBody.innerHTML = '';
-
-            filteredSet.forEach(rowItem => {
+            // 3. TABLE GENERATION
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            filteredSet.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 transition duration-150 text-xs sm:text-sm";
-
-                const renderedBadge = rowItem.status === "Compliant"
-                    ? `<span class="px-2 py-0.5 font-semibold text-xs bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">Compliant</span>`
-                    : `<span class="px-2 py-0.5 font-semibold text-xs bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded">Non-Compliant</span>`;
-
-                const rcaFormattedText = rowItem.status === "Compliant" 
-                    ? `<span class="text-slate-500 font-normal">-</span>` 
-                    : `<span class="text-amber-400 font-semibold">${rowItem.rca}</span>`;
-
+                tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 transition text-sm";
+                const isCompliant = row.status.trim().toLowerCase() === 'compliant';
+                
                 tr.innerHTML = `
-                    <td class="px-6 py-3.5 font-mono font-bold text-white tracking-wide">${rowItem.equipment_no}</td>
-                    <td class="px-6 py-3.5 text-slate-300">${rowItem.pm_type}</td>
-                    <td class="px-6 py-3.5 text-slate-300">${rowItem.location}</td>
-                    <td class="px-6 py-3.5 text-slate-400 font-medium">${rowItem.region}</td>
-                    <td class="px-6 py-3.5">${renderedBadge}</td>
-                    <td class="px-6 py-3.5">${rcaFormattedText}</td>
+                    <td class="px-6 py-3.5 font-mono font-bold text-white">${row.equipment_no}</td>
+                    <td class="px-6 py-3.5">${row.pm_type}</td>
+                    <td class="px-6 py-3.5">${row.location}</td>
+                    <td class="px-6 py-3.5 text-slate-400">${row.region}</td>
+                    <td class="px-6 py-3.5"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isCompliant ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status}</span></td>
+                    <td class="px-6 py-3.5 ${isCompliant ? 'text-slate-500': 'text-amber-400 font-medium'}">${row.rca}</td>
                 `;
-                dynamicTableBody.appendChild(tr);
+                tableBody.appendChild(tr);
             });
         }
 
-        // Initialize dashboard state immediately on browser window load
-        window.onload = updateDashboard;
+        window.onload = fetchLiveSheetData;
     </script>
 </body>
 </html>
