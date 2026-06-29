@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PM Compliance & Reliability Dashboard</title>
+    <title>Live PM Compliance Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -11,82 +11,62 @@
 
     <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-50">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">Live Maintenance Operations</h1>
-            <p class="text-xs text-slate-400">Connected to Google Sheets Database</p>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Maintenance Operations Dashboard</h1>
+            <p class="text-xs text-slate-400">Live Workspace Compliance Monitoring</p>
         </div>
         
         <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700">
             <label for="weekSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
-            <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus:border-blue-500 transition cursor-pointer">
-                <option value="22">Week 22 (May 30 - June 05, 2026)</option>
+            <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer">
+                <option value="21">Week 21</option>
+                <option value="22">Week 22</option>
                 <option value="23" selected>Week 23 (June 06 - June 12, 2026)</option>
-                <option value="24">Week 24 (June 13 - June 19, 2026)</option>
+                <option value="24">Week 24</option>
+                <option value="25">Week 25</option>
             </select>
         </div>
     </header>
 
-    <div id="loadingOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center z-50 transition-opacity duration-300">
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center z-50">
         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p class="text-slate-400 font-medium tracking-wide">Ingesting Live Sheet Records...</p>
+        <p class="text-slate-400 font-medium tracking-wide">Syncing Workspace Records...</p>
     </div>
 
     <main class="p-6 max-w-7xl mx-auto space-y-6 hidden" id="dashboardMain">
 
         <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex items-center justify-between shadow-lg">
-                <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Highest Compliance Region</p>
-                    <h3 id="highestRegion" class="text-2xl font-bold text-emerald-400 mt-1">Calculating...</h3>
-                </div>
-                <div class="p-3 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xl font-bold">↑</div>
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Highest Compliance Region</p>
+                <h3 id="highestRegion" class="text-2xl font-bold text-emerald-400 mt-1">Calculating...</h3>
             </div>
-
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex items-center justify-between shadow-lg">
-                <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Lowest Compliance Region</p>
-                    <h3 id="lowestRegion" class="text-2xl font-bold text-rose-400 mt-1">Calculating...</h3>
-                </div>
-                <div class="p-3 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xl font-bold">↓</div>
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Lowest Compliance Region</p>
+                <h3 id="lowestRegion" class="text-2xl font-bold text-rose-400 mt-1">Calculating...</h3>
             </div>
-
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 flex items-center justify-between shadow-lg">
-                <div>
-                    <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Total Scheduled PMs</p>
-                    <h3 id="totalPms" class="text-2xl font-bold text-white mt-1">0 Work Orders</h3>
-                </div>
-                <div class="p-3 rounded-lg bg-slate-700 text-slate-300 text-sm font-semibold">Active</div>
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Total Work Orders (Selected Week)</p>
+                <h3 id="totalPms" class="text-2xl font-bold text-white mt-1">0</h3>
             </div>
         </section>
 
         <section class="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <div class="mb-4">
-                    <h3 class="text-md font-semibold text-white">PM Compliance Rate by Region (%)</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Automated color indicators: <span class="text-emerald-400 font-medium">Green = Highest Compliance</span> / <span class="text-rose-400 font-medium">Red = Lowest Compliance</span></p>
-                </div>
-                <div class="h-64 relative">
-                    <canvas id="regionChart"></canvas>
-                </div>
+                <h3 class="text-md font-semibold text-white mb-2">PM Compliance Rate by Region (%)</h3>
+                <div class="h-64 relative"><canvas id="regionChart"></canvas></div>
             </div>
-
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-2 shadow-lg">
-                <h3 class="text-md font-semibold text-white mb-4">RCA on Non-Compliance</h3>
-                <div class="h-64 relative">
-                    <canvas id="rcaChart"></canvas>
-                </div>
+                <h3 class="text-md font-semibold text-white mb-2">Non-Compliance Root Causes (RCA)</h3>
+                <div class="h-64 relative"><canvas id="rcaChart"></canvas></div>
             </div>
         </section>
 
         <section class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-            <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-                <div>
-                    <h3 class="text-md font-semibold text-white">Asset-Level PM Tracking Log</h3>
-                    <p class="text-xs text-slate-400 mt-0.5">Filtered data tracking columns mapping directly to your sheet schema</p>
-                </div>
+            <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50">
+                <h3 class="text-md font-semibold text-white">Asset-Level PM Tracking Log</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm text-slate-300">
-                    <thead class="bg-slate-900/40 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-700">
+                    <thead class="bg-slate-900/40 text-xs uppercase text-slate-400 border-b border-slate-700">
                         <tr>
                             <th class="px-6 py-3.5">Equipment Type</th>
                             <th class="px-6 py-3.5">PM Type</th>
@@ -96,57 +76,58 @@
                             <th class="px-6 py-3.5">RCA on Non-Compliance</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-700/50">
-                        </tbody>
+                    <tbody id="tableBody" class="divide-y divide-slate-700/50"></tbody>
                 </table>
             </div>
         </section>
     </main>
 
     <script>
-        // ⚠️ PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL EXECUTABLE LINK HERE:
-        const API_URL = "https://script.google.com/macros/s/AKfycbxA9Icm0MR9LyrE0MNFrdW-Qq7zf0HiHag79WFCw_PMoNewAYnlLfe89TzmZEdaKV4fEA/exec";
+        // ⚠️ PASTE YOUR BRAND NEW GOOGLE APPS SCRIPT WEB APP URL HERE:
+        const API_URL = "https://script.google.com/macros/s/AKfycbzW7Pau5-Ao7j7f9CyMi7k-xqcm2T3iCRlW9uNgdyU9hGdx9p787e3aA-zPmJkfVb_gkw/exec";
 
         let fullDatabaseRecords = [];
         let regionChartContext = null;
         let rcaChartContext = null;
 
-        // Fetch data array directly from Apps Script deployment on application startup
         async function fetchLiveSheetData() {
             try {
                 const response = await fetch(API_URL);
                 fullDatabaseRecords = await response.json();
                 
-                // Hide loader element, drop main grid panel into view
+                console.log("Raw Data Sample Loaded From Google Sheet:", fullDatabaseRecords[0]); // Debug log
+                
                 document.getElementById('loadingOverlay').classList.add('hidden');
                 document.getElementById('dashboardMain').classList.remove('hidden');
                 
-                // Initial paint
                 updateDashboardVisuals();
             } catch (error) {
-                console.error("Data integration connection engine failure:", error);
-                alert("Critical Integration Error: Failed to fetch records from your Google Sheets Web App link. Verify that your script deployment access is explicitly set to 'Anyone'.");
+                console.error("Connection failed:", error);
+                alert("Could not connect to Apps Script. Verify your setup deployment URL.");
             }
         }
 
         function updateDashboardVisuals() {
-            // 1. Target selected tracking window integer parsing safely
             const activeWeek = parseInt(document.getElementById('weekSelect').value);
+            
+            // Loose comparison tool to catch string-integers gracefully
             const filteredSet = fullDatabaseRecords.filter(row => parseInt(row.week) === activeWeek);
+            
+            console.log(`Filtered items for Week ${activeWeek}:`, filteredSet.length); // Debug log
 
-            document.getElementById('totalPms').innerText = `${filteredSet.length} Work Orders`;
+            document.getElementById('totalPms').innerText = `${filteredSet.length} Row Entries`;
 
-            // 2. Map dynamic unique regions out of your live database strings safely
+            // 1. DYNAMIC REGION INITIALIZATION
             const discreteRegions = [...new Set(fullDatabaseRecords.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
             const regionStats = {};
             discreteRegions.forEach(reg => regionStats[reg] = { scheduled: 0, compliant: 0 });
 
-            // 3. Process structural records with error correction rules
+            // 2. MATH CALCULATIONS
             filteredSet.forEach(item => {
                 const cleanRegion = item.region ? item.region.trim() : "";
-                const cleanStatus = item.status ? item.status.trim().toUpperCase() : ""; // Eliminates case sensitivity issues
+                const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
 
-                if (regionStats[cleanRegion]) {
+                if (regionStats[cleanRegion] !== undefined) {
                     regionStats[cleanRegion].scheduled++;
                     if (cleanStatus === "COMPLIANT") {
                         regionStats[cleanRegion].compliant++;
@@ -161,6 +142,7 @@
 
             discreteRegions.forEach(reg => {
                 const stats = regionStats[reg];
+                // Make sure we only show regions that actually have work scheduled this week
                 if (stats.scheduled > 0) {
                     const pct = Math.round((stats.compliant / stats.scheduled) * 100);
                     regionLabels.push(reg);
@@ -168,45 +150,46 @@
 
                     if (pct < minScore) { minScore = pct; lowestReg = reg; }
                     if (pct > maxScore) { maxScore = pct; highestReg = reg; }
+                } else {
+                    // Fallback to preserve empty bar slots visible on zero-data frames
+                    regionLabels.push(reg);
+                    regionPercentages.push(0);
                 }
             });
 
-            // Paint Top Summary Cards
-            document.getElementById('highestRegion').innerText = highestReg !== 'N/A' ? `${highestReg} (${maxScore}%)` : 'N/A';
-            document.getElementById('lowestRegion').innerText = lowestReg !== 'N/A' ? `${lowestReg} (${minScore}%)` : 'N/A';
+            document.getElementById('highestRegion').innerText = highestReg !== 'N/A' ? `${highestReg} (${maxScore}%)` : '0% Found';
+            document.getElementById('lowestRegion').innerText = lowestReg !== 'N/A' ? `${lowestReg} (${minScore}%)` : '0% Found';
 
-            // Establish responsive bar highlights
             const barColors = regionLabels.map(label => {
-                if (label === lowestReg) return '#f43f5e'; // Highlight lowest performer in Red
-                if (label === highestReg) return '#10b981'; // Highlight highest performer in Green
-                return '#475569';                           // Neutral Slate for all others
+                if (lowestReg !== 'N/A' && label === lowestReg) return '#f43f5e'; // Highlight Red
+                if (highestReg !== 'N/A' && label === highestReg) return '#10b981'; // Highlight Green
+                return '#3b82f6'; // Clean electric blue default bars instead of empty gray slots
             });
 
-            // Clear old instance and re-render dynamic region chart
+            // 3. BAR CHART REPAINT
             if (regionChartContext) regionChartContext.destroy();
             regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ data: regionPercentages, backgroundColor: barColors, borderRadius: 6, barThickness: 28 }]
+                    datasets: [{ data: regionPercentages, backgroundColor: barColors, borderRadius: 6, barThickness: 24 }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: { 
-                        y: { min: 0, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }, 
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 11 } } } 
+                        y: { min: 0, max: 100, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: v => v + '%' } }, 
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 45, minRotation: 45 } } 
                     }
                 }
             });
 
-            // 4. Aggregate RCA Reasons securely
+            // 4. RCA PIE BREAKDOWN
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
                 const cleanRca = item.rca ? item.rca.trim() : "-";
-                
                 if (cleanStatus !== "COMPLIANT" && cleanRca && cleanRca !== "-") {
                     rcaTallies[cleanRca] = (rcaTallies[cleanRca] || 0) + 1;
                 }
@@ -215,31 +198,30 @@
             const rcaLabels = Object.keys(rcaTallies);
             const rcaDataValues = Object.values(rcaTallies);
 
-            // Re-render RCA Doughnut
             if (rcaChartContext) rcaChartContext.destroy();
             rcaChartContext = new Chart(document.getElementById('rcaChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: rcaLabels.length ? rcaLabels : ['100% Compliance Obtained'],
-                    datasets: [{ data: rcaDataValues.length ? rcaDataValues : [1], backgroundColor: rcaDataValues.length ? ['#f59e0b', '#ef4444', '#a855f7', '#06b6d4', '#3b82f6'] : ['#1e293b'], borderWidth: 0 }]
+                    labels: rcaLabels.length ? rcaLabels : ['No Missed Work Orders'],
+                    datasets: [{ data: rcaDataValues.length ? rcaDataValues : [1], backgroundColor: rcaDataValues.length ? ['#f59e0b', '#ef4444', '#a855f7', '#06b6d4'] : ['#1e293b'], borderWidth: 0 }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 12, padding: 12 } } }, cutout: '75%' }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 10 } } }, cutout: '70%' }
             });
 
-            // 5. Generate and paint the interactive Data Table lines
+            // 5. TABLE BUILDER
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             
             filteredSet.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 transition text-sm";
+                tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm";
                 const isCompliant = row.status && row.status.trim().toUpperCase() === 'COMPLIANT';
                 
                 tr.innerHTML = `
-                    <td class="px-6 py-3.5 font-mono font-bold text-white tracking-wide">${row.equipment_no || '-'}</td>
-                    <td class="px-6 py-3.5 text-slate-300">${row.pm_type || '-'}</td>
-                    <td class="px-6 py-3.5 text-slate-300">${row.location || '-'}</td>
-                    <td class="px-6 py-3.5 text-slate-400 font-medium">${row.region || '-'}</td>
+                    <td class="px-6 py-3.5 font-bold text-white">${row.equipment_no || '-'}</td>
+                    <td class="px-6 py-3.5">${row.pm_type || '-'}</td>
+                    <td class="px-6 py-3.5">${row.location || '-'}</td>
+                    <td class="px-6 py-3.5 text-slate-400">${row.region || '-'}</td>
                     <td class="px-6 py-3.5"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isCompliant ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Unknown'}</span></td>
                     <td class="px-6 py-3.5 ${isCompliant ? 'text-slate-500': 'text-amber-400 font-medium'}">${row.rca || '-'}</td>
                 `;
@@ -247,7 +229,6 @@
             });
         }
 
-        // Auto-run core network fetch thread when browser engine loads page frame
         window.onload = fetchLiveSheetData;
     </script>
 </body>
