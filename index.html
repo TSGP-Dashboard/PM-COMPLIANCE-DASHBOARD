@@ -11,16 +11,17 @@
 
     <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-50">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">PM COMPLIANCE DASHBOARD</h1>
-            <p class="text-xs text-slate-400">Live PM Compliance Monitoring</p>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Maintenance Operations Dashboard</h1>
+            <p class="text-xs text-slate-400">Live Workspace Compliance Monitoring</p>
         </div>
         
         <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700">
             <label for="weekSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
             <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer">
+                <option value="21">Week 21</option>
                 <option value="22">Week 22</option>
                 <option value="23">Week 23</option>
-                <option value="24" selected>Week 24 (Current Operational Window)</option>
+                <option value="24">Week 24</option>
                 <option value="25">Week 25</option>
             </select>
         </div>
@@ -119,7 +120,7 @@
                 regionCounts[reg] = 0;
             });
 
-            // 3. TALLY COUNTS
+            // 3. TALLY COUNTS (STRICTLY MATCH "DONE")
             filteredSet.forEach(item => {
                 const cleanRegion = item.region ? item.region.trim() : "";
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
@@ -153,7 +154,7 @@
                 return '#3b82f6'; 
             });
 
-            // 4. BAR CHART REPAINT
+            // 4. BAR CHART REPAINT (PURE RAW COUNTS ONLY)
             if (regionChartContext) regionChartContext.destroy();
             regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
@@ -183,11 +184,14 @@
                 }
             });
 
-            // 5. RCA PIE BREAKDOWN (Aggregates anything that isn't "DONE")
+            // 5. RCA PIE BREAKDOWN (Handles flexible backend object key names)
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
-                const cleanRca = item.rca ? item.rca.trim() : "";
+                
+                // Flexible mapping check to secure variable naming schemas
+                let rawRca = item.rca || item.rca_on_non_compliance || "";
+                const cleanRca = rawRca.trim();
                 
                 if (cleanStatus !== "DONE") {
                     const reason = (cleanRca === "" || cleanRca === "-") ? "Pending Review / Unspecified" : cleanRca;
@@ -217,8 +221,9 @@
                 tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm";
                 const isDone = row.status && row.status.trim().toUpperCase() === 'DONE';
                 
-                // Fallback catch if column parameters render an empty array string slot
-                const rcaDisplay = (row.rca && row.rca.trim() !== "") ? row.rca.trim() : "-";
+                // Checks both common naming conventions used by the Apps Script parser
+                let rcaValue = row.rca || row.rca_on_non_compliance || '';
+                const rcaDisplay = (rcaValue.trim() !== "" && rcaValue.trim() !== "-") ? rcaValue.trim() : "-";
                 
                 tr.innerHTML = `
                     <td class="px-6 py-3.5 font-bold text-white">${row.equipment_no || '-'}</td>
