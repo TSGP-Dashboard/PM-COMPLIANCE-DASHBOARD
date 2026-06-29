@@ -11,13 +11,13 @@
 
     <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-50">
         <div>
-            <h1 class="text-2xl font-bold tracking-tight text-white">PM Compliance Dashboard</h1>
-            <p class="text-xs text-slate-400">Live PM Compliance Monitoring</p>
+            <h1 class="text-2xl font-bold tracking-tight text-white">Maintenance Operations Dashboard</h1>
+            <p class="text-xs text-slate-400">Live Workspace Compliance Monitoring</p>
         </div>
         
         <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700">
             <label for="weekSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
-            <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer">
+            <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[120px]">
                 </select>
         </div>
     </header>
@@ -90,7 +90,7 @@
                 const response = await fetch(API_URL);
                 fullDatabaseRecords = await response.json();
                 
-                // 🛠️ DYNAMICALLY BUILD THE WEEK OPTIONS BEFORE RENDERING VIEWS
+                // Build dynamic dropdown options safely
                 buildDynamicWeekSelector();
                 
                 document.getElementById('loadingOverlay').classList.add('hidden');
@@ -106,20 +106,31 @@
         function buildDynamicWeekSelector() {
             const selector = document.getElementById('weekSelect');
             
-            // 1. Extract all unique week values from database array strings
-            const uniqueWeeks = [...new Set(fullDatabaseRecords.map(row => parseInt(row.week)))].filter(Boolean);
+            // Cleanly isolates raw data values, filters out header string errors, and handles zero padding
+            const uniqueWeeks = [...new Set(fullDatabaseRecords.map(row => {
+                if (!row.week) return null;
+                const match = String(row.week).replace(/\D/g, ""); // Strip non-numeric text strings if any exist
+                return match ? parseInt(match, 10) : null;
+            }))].filter(wk => wk !== null && !isNaN(wk));
             
-            // 2. Sort numerical order chronologically (Smallest week number to Largest)
+            // Sort weeks in ascending numerical order
             uniqueWeeks.sort((a, b) => a - b);
             
-            // 3. Clear any existing placeholders and populate options dynamically
             selector.innerHTML = '';
+            
+            if (uniqueWeeks.length === 0) {
+                const option = document.createElement('option');
+                option.textContent = "No Data Found";
+                selector.appendChild(option);
+                return;
+            }
+
             uniqueWeeks.forEach((wk, index) => {
                 const option = document.createElement('option');
                 option.value = wk;
                 option.textContent = `Week ${wk}`;
                 
-                // Smart Feature: Automatically highlights the latest active operational week in the array list
+                // Sets the newest/highest week number as selected active view
                 if (index === uniqueWeeks.length - 1) {
                     option.selected = true;
                 }
@@ -129,10 +140,16 @@
 
         function updateDashboardVisuals() {
             const selectorElement = document.getElementById('weekSelect');
-            if(!selectorElement.value) return; // Prevent crashes if sheet data is completely blank
+            if(!selectorElement.value) return; 
             
-            const activeWeek = parseInt(selectorElement.value);
-            const filteredSet = fullDatabaseRecords.filter(row => parseInt(row.week) === activeWeek);
+            const activeWeek = parseInt(selectorElement.value, 10);
+            
+            // Safe alignment mapping comparison
+            const filteredSet = fullDatabaseRecords.filter(row => {
+                if(!row.week) return false;
+                const normalizedWeek = parseInt(String(row.week).replace(/\D/g, ""), 10);
+                return normalizedWeek === activeWeek;
+            });
             
             document.getElementById('totalPms').innerText = `${filteredSet.length} Row Entries`;
 
