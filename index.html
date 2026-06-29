@@ -18,7 +18,7 @@
         
         <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700">
             <label for="weekSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
-            <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[130px]">
+            <select id="weekSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[130px]">
                 </select>
         </div>
     </header>
@@ -39,15 +39,23 @@
                 <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Lowest Completed Region</p>
                 <h3 id="lowestRegion" class="text-1xl font-bold text-rose-400 mt-1">Calculating...</h3>
             </div>
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Overall Week Compliance Rate</p>
-                <h3 id="totalPms" class="text-1xl font-bold text-blue-400 mt-1">0%</h3>
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg flex justify-between items-center">
+                <div class="space-y-1">
+                    <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Overall Week Compliance</p>
+                    <h3 id="totalPms" class="text-1xl font-bold text-blue-400">0%</h3>
+                </div>
+                <div class="w-32 h-12 relative">
+                    <canvas id="sparklineChart"></canvas>
+                </div>
             </div>
         </section>
 
         <section class="grid grid-cols-1 lg:grid-cols-6 gap-6">
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <h3 class="text-md font-semibold text-white mb-2">Total PMs Done by Region (Count)</h3>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-md font-semibold text-white">Total PMs Done by Region (Count)</h3>
+                    <span id="filterBadge" class="text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded hidden">Click bar to isolate</span>
+                </div>
                 <div class="h-64 relative"><canvas id="regionChart"></canvas></div>
             </div>
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
@@ -61,8 +69,12 @@
         </section>
 
         <section class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-            <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50">
+            <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <h3 class="text-md font-semibold text-white">Asset-Level PM Tracking Log</h3>
+                <div id="activeFilterIndicator" class="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg hidden flex items-center gap-2">
+                    <span>Filtering Table to: <strong id="filteredRegionName"></strong></span>
+                    <button onclick="clearActiveRegionFilter()" class="underline hover:text-white font-bold cursor-pointer">Clear Filter</button>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm text-slate-300">
@@ -83,9 +95,6 @@
     </main>
 
     <script>
-        // Unregister global execution to prevent double-rendering bugs across mixed scale charts
-        // We will pass ChartDataLabels inside the plugins arrays locally instead.
-
         // ⚠️ YOUR GOOGLE APPS SCRIPT WEB APP URL:
         const API_URL = "https://script.google.com/macros/s/AKfycbzanFzLTeJQKaG7uPXTA12BNKaxiqJ7UfJ3sqQv02JYRo2BW1w63UDT1erCi6iDo3hlUQ/exec";
 
@@ -93,6 +102,11 @@
         let regionChartContext = null;
         let complianceChartContext = null;
         let rcaChartContext = null;
+        let sparklineChartContext = null;
+        
+        // State Variable to hold active clicked filter values
+        let selectedRegionFilter = null; 
+        let uniqueWeeksChronological = [];
 
         async function fetchLiveSheetData() {
             try {
@@ -105,47 +119,62 @@
                 
                 document.getElementById('loadingOverlay').classList.add('hidden');
                 document.getElementById('dashboardMain').classList.remove('hidden');
+                document.getElementById('filterBadge').classList.remove('hidden');
                 
                 updateDashboardVisuals();
             } catch (error) {
                 console.error("Connection failed:", error);
-                alert("Could not connect to Apps Script. Verify your web app URL execution deployment settings.");
+                alert("Could not connect to Apps Script. Verify web app execution deployment links.");
             }
         }
 
         function buildDynamicWeekSelector() {
             const selector = document.getElementById('weekSelect');
             
-            const uniqueWeeks = [...new Set(fullDatabaseRecords.map(row => {
+            uniqueWeeksChronological = [...new Set(fullDatabaseRecords.map(row => {
                 if (row.week === undefined || row.week === null || row.week === "") return null;
                 const match = String(row.week).replace(/\D/g, "");
                 return match ? parseInt(match, 10) : null;
             }))].filter(wk => wk !== null && !isNaN(wk));
             
-            uniqueWeeks.sort((a, b) => a - b);
+            uniqueWeeksChronological.sort((a, b) => a - b);
             selector.innerHTML = '';
             
-            if (uniqueWeeks.length === 0) {
+            if (uniqueWeeksChronological.length === 0) {
                 const option = document.createElement('option');
                 option.textContent = "No Data Found";
                 selector.appendChild(option);
                 return;
             }
 
-            uniqueWeeks.forEach((wk, index) => {
+            uniqueWeeksChronological.forEach((wk, index) => {
                 const option = document.createElement('option');
                 option.value = wk;
                 option.textContent = `Week ${wk}`;
-                if (index === uniqueWeeks.length - 1) {
-                    option.selected = true; 
+                if (index === uniqueWeeksChronological.length - 1) {
+                    option.selected = true;  
                 }
                 selector.appendChild(option);
             });
         }
 
+        // Dropdown changes trigger a filter clear to prevent view mismatches
+        function resetRegionFilterAndRefresh() {
+            selectedRegionFilter = null;
+            document.getElementById('activeFilterIndicator').classList.add('hidden');
+            updateDashboardVisuals();
+        }
+
+        // Resets the table cross-filter explicitly
+        function clearActiveRegionFilter() {
+            selectedRegionFilter = null;
+            document.getElementById('activeFilterIndicator').classList.add('hidden');
+            renderTableRowsOnly(); 
+        }
+
         function updateDashboardVisuals() {
             const selectorElement = document.getElementById('weekSelect');
-            if(!selectorElement.value || selectorElement.value === "No Data Found") return; 
+            if(!selectorElement.value || selectorElement.value === "No Data Found") return;  
             
             const activeWeek = parseInt(selectorElement.value, 10);
             
@@ -155,15 +184,17 @@
                 return normalizedWeek === activeWeek;
             });
 
-            // Calculate overall planned vs actual numbers across the entire week group dataset
+            // Summary Calculations
             const globalDoneCount = filteredSet.filter(r => r.status && r.status.trim().toUpperCase() === "DONE").length;
             const globalTotalPlanned = filteredSet.length;
             const globalPercentage = globalTotalPlanned > 0 ? Math.round((globalDoneCount / globalTotalPlanned) * 100) : 0;
             
             document.getElementById('totalPms').innerText = `${globalPercentage}% (${globalDoneCount}/${globalTotalPlanned})`;
 
+            // 📈 UPGRADE 1: GENERATE SPARKLINE TREND GRAPH (Last 4 active weeks layout calculation)
+            generateSparklineTrend(activeWeek);
+
             const discreteRegions = [...new Set(filteredSet.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
-            
             const regionDoneCounts = {};
             const regionTotalPlanned = {};
             
@@ -177,9 +208,9 @@
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
 
                 if (regionTotalPlanned[cleanRegion] !== undefined) {
-                    regionTotalPlanned[cleanRegion]++; // Count toward total planned work orders
+                    regionTotalPlanned[cleanRegion]++;
                     if (cleanStatus === "DONE") {
-                        regionDoneCounts[cleanRegion]++; // Count toward completed work orders
+                        regionDoneCounts[cleanRegion]++;
                     }
                 }
             });
@@ -211,10 +242,29 @@
                 if (maxCount === 0) return '#3b82f6';
                 if (label === lowestReg && maxCount !== minCount) return '#f43f5e';
                 if (label === highestReg && maxCount !== minCount) return '#10b981';
-                return '#3b82f6'; 
+                return '#3b82f6';  
             });
 
-            // 4. CHART 1: TOTAL PMs DONE BY REGION COUNT
+            // 🎯 UPGRADE 4: INTERACTIVE CROSS FILTERING HANDLERS
+            const chartClickHandler = function(event, activeElements, chartInstance) {
+                if (activeElements && activeElements.length > 0) {
+                    const dataIndex = activeElements[0].index;
+                    const clickedRegion = chartInstance.data.labels[dataIndex];
+                    
+                    // Toggle execution state: click active region twice to clear out the filter
+                    if (selectedRegionFilter === clickedRegion) {
+                        selectedRegionFilter = null;
+                        document.getElementById('activeFilterIndicator').classList.add('hidden');
+                    } else {
+                        selectedRegionFilter = clickedRegion;
+                        document.getElementById('filteredRegionName').innerText = clickedRegion;
+                        document.getElementById('activeFilterIndicator').classList.remove('hidden');
+                    }
+                    renderTableRowsOnly(); // Re-render the lower table dynamically without destroying graphs
+                }
+            };
+
+            // CHART 1: TOTAL COUNT
             if (regionChartContext) regionChartContext.destroy();
             regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
@@ -226,7 +276,8 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { 
+                    onClick: (e, items) => chartClickHandler(e, items, regionChartContext),
+                    plugins: {  
                         legend: { display: false },
                         datalabels: {
                             display: true,
@@ -238,31 +289,26 @@
                             formatter: function(value) { return value > 0 ? value : ''; }
                         }
                     },
-                    scales: { 
-                        y: { beginAtZero: true, suggestedMax: maxCount + 2, grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 1, precision: 0 } }, 
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 45, minRotation: 45 } } 
+                    scales: {  
+                        y: { beginAtZero: true, suggestedMax: maxCount + 2, grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 1, precision: 0 } },  
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 45, minRotation: 45 } }  
                     }
                 }
             });
 
-            // 5. NEW CHART 2: COMPLIANCE PERFORMANCE RATES BY REGION (%)
+            // CHART 2: COMPLIANCE RATE PERCENTAGE
             if (complianceChartContext) complianceChartContext.destroy();
             complianceChartContext = new Chart(document.getElementById('complianceRateChart'), {
                 type: 'bar',
                 plugins: [ChartDataLabels],
                 data: {
                     labels: regionLabels,
-                    datasets: [{
-                        label: 'Compliance Rate (%)',
-                        data: regionRatePercentages,
-                        backgroundColor: '#6366f1', // Beautiful sleek Indigo tone
-                        borderRadius: 6,
-                        barThickness: 20
-                    }]
+                    datasets: [{ label: 'Compliance Rate (%)', data: regionRatePercentages, backgroundColor: '#6366f1', borderRadius: 6, barThickness: 20 }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (e, items) => chartClickHandler(e, items, complianceChartContext),
                     plugins: {
                         legend: { display: false },
                         datalabels: {
@@ -282,7 +328,7 @@
                 }
             });
 
-            // 6. CHART 3: RCA PIE CHART BREAKDOWN
+            // CHART 3: RCA DOUGHNUT
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
@@ -307,29 +353,48 @@
                     labels: rcaLabels.length ? rcaLabels : ['100% Operational Compliance'],
                     datasets: [{ data: rcaDataValues.length ? rcaDataValues : [1], backgroundColor: rcaDataValues.length ? ['#f59e0b', '#ef4444', '#a855f7', '#06b6d4'] : ['#1e293b'], borderWidth: 0 }]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { 
+                options: {  
+                    responsive: true,  
+                    maintainAspectRatio: false,  
+                    plugins: {  
                         legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 10, font: { size: 11 } } },
                         datalabels: {
-                            display: hasMissedPms, 
+                            display: hasMissedPms,  
                             color: '#ffffff',
                             font: { weight: 'bold', size: 12 },
                             textShadowColor: 'rgba(0, 0, 0, 0.7)',
                             textShadowBlur: 4,
                             formatter: function(value) { return value; }
                         }
-                    }, 
-                    cutout: '65%' 
+                    },  
+                    cutout: '65%'  
                 }
             });
 
-            // 7. DRAW TABLE ROWS
+            // Initialize Table Render Execution Pass
+            renderTableRowsOnly();
+        }
+
+        // Subroutine function designed to isolate data sets independently
+        function renderTableRowsOnly() {
+            const selectorElement = document.getElementById('weekSelect');
+            const activeWeek = parseInt(selectorElement.value, 10);
+            
+            // Step 1: Filter raw set base down to target operational week frame
+            let rowsToRender = fullDatabaseRecords.filter(row => {
+                if(row.week === undefined || row.week === null || row.week === "") return false;
+                return parseInt(String(row.week).replace(/\D/g, ""), 10) === activeWeek;
+            });
+
+            // Step 2: Apply Chart Click Region Cross-Filter logic if state is populated
+            if (selectedRegionFilter !== null) {
+                rowsToRender = rowsToRender.filter(row => row.region && row.region.trim() === selectedRegionFilter);
+            }
+
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             
-            filteredSet.forEach(row => {
+            rowsToRender.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm";
                 const isDone = row.status && row.status.trim().toUpperCase() === 'DONE';
@@ -338,14 +403,70 @@
                 const rcaDisplay = (rcaValue.trim() !== "" && rcaValue.trim() !== "-") ? rcaValue.trim() : "-";
                 
                 tr.innerHTML = `
-                    <td class="px-6 py-1.0 font-bold text-white">${row.equipment_no || '-'}</td>
-                    <td class="px-6 py-1.0">${row.pm_type || '-'}</td>
-                    <td class="px-6 py-1.0">${row.location || '-'}</td>
-                    <td class="px-6 py-1.0 text-slate-400">${row.region || '-'}</td>
-                    <td class="px-6 py-1.0"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
-                    <td class="px-6 py-1.0 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
+                    <td class="px-6 py-1.2 font-bold text-white">${row.equipment_no || '-'}</td>
+                    <td class="px-6 py-1.2">${row.pm_type || '-'}</td>
+                    <td class="px-6 py-1.2">${row.location || '-'}</td>
+                    <td class="px-6 py-1.2 text-slate-400">${row.region || '-'}</td>
+                    <td class="px-6 py-1.2"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
+                    <td class="px-6 py-1.2 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
                 `;
                 tableBody.appendChild(tr);
+            });
+        }
+
+        // Subroutine function tracking historical weekly trends
+        function generateSparklineTrend(currentSelectedWeek) {
+            // Find current active index inside unique operational weeks array checklist
+            const currentIdx = uniqueWeeksChronological.indexOf(currentSelectedWeek);
+            if (currentIdx === -1) return;
+
+            // Gather the last 4 visible active weeks leading up to the current target selection
+            const startIdx = Math.max(0, currentIdx - 3);
+            const lookbackWeeks = uniqueWeeksChronological.slice(startIdx, currentIdx + 1);
+
+            const sparklineLabels = [];
+            const sparklineData = [];
+
+            lookbackWeeks.forEach(wk => {
+                const weekDataset = fullDatabaseRecords.filter(row => {
+                    if(!row.week) return false;
+                    return parseInt(String(row.week).replace(/\D/g, ""), 10) === wk;
+                });
+                const doneCount = weekDataset.filter(r => r.status && r.status.trim().toUpperCase() === "DONE").length;
+                const totalCount = weekDataset.length;
+                const rate = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+                
+                sparklineLabels.push(`Wk ${wk}`);
+                sparklineData.push(rate);
+            });
+
+            if (sparklineChartContext) sparklineChartContext.destroy();
+            sparklineChartContext = new Chart(document.getElementById('sparklineChart'), {
+                type: 'line',
+                data: {
+                    labels: sparklineLabels,
+                    datasets: [{
+                        data: sparklineData,
+                        borderColor: '#3b82f6', // Match blue style lines
+                        borderWidth: 2,
+                        pointRadius: lookbackWeeks.length === 1 ? 3 : 1.5, // Dot highlights look better on single indices
+                        pointBackgroundColor: '#60a5fa',
+                        tension: 0.2, // Clean curved aesthetics
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        datalabels: { display: false } // Hide chart values overlay to prevent cluttering tiny boxes
+                    },
+                    scales: {
+                        x: { display: false }, // Completely strip out axes labels and canvas borders
+                        y: { display: false, min: 0, max: 100 }
+                    }
+                }
             });
         }
 
