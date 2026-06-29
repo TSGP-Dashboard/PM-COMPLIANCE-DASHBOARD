@@ -17,7 +17,7 @@
         
         <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700">
             <label for="weekSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
-            <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[120px]">
+            <select id="weekSelect" onchange="updateDashboardVisuals()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[130px]">
                 </select>
         </div>
     </header>
@@ -78,8 +78,8 @@
     </main>
 
     <script>
-        // ⚠️ PASTE YOUR GOOGLE APPS SCRIPT WEB APP URL HERE:
-        const API_URL = "https://script.google.com/macros/s/AKfycbxdspHHNdkfaBP70Wh9Hngl1N70mugD88hPkrVig4jxOFTY_ivNtNjJPbVX75vzfImLGA/exec";
+        // ⚠️ PASTE YOUR NEW RE-DEPLOYED APPS SCRIPT URL HERE:
+        const API_URL = "https://script.google.com/macros/s/AKfycbzanFzLTeJQKaG7uPXTA12BNKaxiqJ7UfJ3sqQv02JYRo2BW1w63UDT1erCi6iDo3hlUQ/exec";
 
         let fullDatabaseRecords = [];
         let regionChartContext = null;
@@ -90,7 +90,8 @@
                 const response = await fetch(API_URL);
                 fullDatabaseRecords = await response.json();
                 
-                // Build dynamic dropdown options safely
+                console.log("Database Records Synchronized:", fullDatabaseRecords);
+                
                 buildDynamicWeekSelector();
                 
                 document.getElementById('loadingOverlay').classList.add('hidden');
@@ -99,17 +100,17 @@
                 updateDashboardVisuals();
             } catch (error) {
                 console.error("Connection failed:", error);
-                alert("Could not connect to Apps Script. Verify your setup deployment URL.");
+                alert("Could not connect to Apps Script. Verify your web app URL execution deployment settings.");
             }
         }
 
         function buildDynamicWeekSelector() {
             const selector = document.getElementById('weekSelect');
             
-            // Cleanly isolates raw data values, filters out header string errors, and handles zero padding
+            // Extracts values from the payload array structure cleanly
             const uniqueWeeks = [...new Set(fullDatabaseRecords.map(row => {
-                if (!row.week) return null;
-                const match = String(row.week).replace(/\D/g, ""); // Strip non-numeric text strings if any exist
+                if (row.week === undefined || row.week === null || row.week === "") return null;
+                const match = String(row.week).replace(/\D/g, "");
                 return match ? parseInt(match, 10) : null;
             }))].filter(wk => wk !== null && !isNaN(wk));
             
@@ -129,10 +130,8 @@
                 const option = document.createElement('option');
                 option.value = wk;
                 option.textContent = `Week ${wk}`;
-                
-                // Sets the newest/highest week number as selected active view
                 if (index === uniqueWeeks.length - 1) {
-                    option.selected = true;
+                    option.selected = true; // Auto-select latest operational week entry points
                 }
                 selector.appendChild(option);
             });
@@ -140,21 +139,20 @@
 
         function updateDashboardVisuals() {
             const selectorElement = document.getElementById('weekSelect');
-            if(!selectorElement.value) return; 
+            if(!selectorElement.value || selectorElement.value === "No Data Found") return; 
             
             const activeWeek = parseInt(selectorElement.value, 10);
             
-            // Safe alignment mapping comparison
             const filteredSet = fullDatabaseRecords.filter(row => {
-                if(!row.week) return false;
+                if(row.week === undefined || row.week === null || row.week === "") return false;
                 const normalizedWeek = parseInt(String(row.week).replace(/\D/g, ""), 10);
                 return normalizedWeek === activeWeek;
             });
             
             document.getElementById('totalPms').innerText = `${filteredSet.length} Row Entries`;
 
-            // 1. GATHER UNIQUE REGIONS
-            const discreteRegions = [...new Set(fullDatabaseRecords.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
+            // 1. GATHER UNIQUE REGIONS FROM VISIBLE RECORDS
+            const discreteRegions = [...new Set(filteredSet.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
             
             // 2. INITIALIZE TRACKING COUNTERS
             const regionCounts = {};
@@ -185,7 +183,7 @@
             });
 
             document.getElementById('highestRegion').innerText = maxCount > 0 ? `${highestReg} (${maxCount} Done)` : '0 Done Found';
-            document.getElementById('lowestRegion').innerText = filteredSet.length > 0 ? `${lowestReg} (${minCount} Done)` : '0 Done Found';
+            document.getElementById('lowestRegion').innerText = filteredSet.length > 0 ? `${lowestReg} (${minCount === 999999 ? 0 : minCount} Done)` : '0 Done Found';
 
             const barColors = regionLabels.map(label => {
                 if (maxCount === 0) return '#3b82f6';
@@ -217,7 +215,7 @@
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
-                let rawRca = item.rca_on_non_compliance || item.rca || "";
+                let rawRca = item.rca_on_non_compliance || "";
                 const cleanRca = rawRca.trim();
                 
                 if (cleanStatus !== "DONE") {
@@ -248,7 +246,7 @@
                 tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm";
                 const isDone = row.status && row.status.trim().toUpperCase() === 'DONE';
                 
-                let rcaValue = row.rca_on_non_compliance || row.rca || '';
+                let rcaValue = row.rca_on_non_compliance || '';
                 const rcaDisplay = (rcaValue.trim() !== "" && rcaValue.trim() !== "-") ? rcaValue.trim() : "-";
                 
                 tr.innerHTML = `
