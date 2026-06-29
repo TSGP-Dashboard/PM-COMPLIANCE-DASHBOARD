@@ -396,12 +396,12 @@
                 const rcaDisplay = (rcaValue.trim() !== "" && rcaValue.trim() !== "-") ? rcaValue.trim() : "-";
                 
                 tr.innerHTML = `
-                    <td class="px-6 py-1.5 font-bold text-white">${row.equipment_no || '-'}</td>
-                    <td class="px-6 py-1.5">${row.pm_type || '-'}</td>
-                    <td class="px-6 py-1.5">${row.location || '-'}</td>
-                    <td class="px-6 py-1.5 text-slate-400">${row.region || '-'}</td>
-                    <td class="px-6 py-1.5"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
-                    <td class="px-6 py-1.5 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
+                    <td class="px-6 py-1.2 font-bold text-white">${row.equipment_no || '-'}</td>
+                    <td class="px-6 py-1.2">${row.pm_type || '-'}</td>
+                    <td class="px-6 py-1.2">${row.location || '-'}</td>
+                    <td class="px-6 py-1.2 text-slate-400">${row.region || '-'}</td>
+                    <td class="px-6 py-1.2"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
+                    <td class="px-6 py-1.2 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
                 `;
                 tableBody.appendChild(tr);
             });
