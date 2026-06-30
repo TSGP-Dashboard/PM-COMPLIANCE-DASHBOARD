@@ -13,7 +13,7 @@
     <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-8 py-4 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sticky top-0 z-50">
         <div>
             <h1 class="text-2xl font-bold tracking-tight text-white">PM Compliance Dashboard</h1>
-            <p class="text-xs text-slate-400">OMEGA ASIA EQUIPMENT CORPORATION</p>
+            <p class="text-xs text-slate-400 tracking-wider">OMEGA ASIA EQUIPMENT CORPORATION</p>
         </div>
         
         <div class="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto self-stretch sm:self-auto">
@@ -26,7 +26,7 @@
             <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700 w-full sm:w-auto">
                 <label id="selectorLabel" for="contextSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2 whitespace-nowrap">Select Target Week:</label>
                 <select id="contextSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[140px] w-full sm:w-auto">
-                    </select>
+                </select>
             </div>
         </div>
     </header>
@@ -132,10 +132,10 @@
     </main>
 
     <script>
-        // REGISTER THE DATALABELS PLUGIN GLOBALLY TO CHART.JS
+        // REGISTER THE DATALABELS PLUGIN GLOBALLY TO CHART.JS ENGINE
         Chart.register(ChartDataLabels);
 
-        // YOUR GOOGLE APPS SCRIPT WEB APP URL:
+        // LIVE DEPLOYED GOOGLE APPS SCRIPT WEB SERVICE HANDLER URL ENDPOINT
         const API_URL = "https://script.google.com/macros/s/AKfycbzanFzLTeJQKaG7uPXTA12BNKaxiqJ7UfJ3sqQv02JYRo2BW1w63UDT1erCi6iDo3hlUQ/exec";
 
         let fullDatabaseRecords = [];
@@ -150,6 +150,7 @@
         let activeStatusTab = 'ALL'; 
         let currentTimelineMode = 'WEEK'; 
         
+        // Chronological Calendar Standard Multi-Week Boundary Association Array map
         const monthlyBoundariesMap = [
             { name: "January", weeks: [1, 2, 3, 4] },
             { name: "February", weeks: [5, 6, 7, 8] },
@@ -165,6 +166,7 @@
             { name: "December", weeks: [48, 49, 50, 51, 52] }
         ];
 
+        // Fetch external Cloud database contents 
         async function fetchLiveSheetData() {
             try {
                 const response = await fetch(API_URL);
@@ -185,10 +187,11 @@
                 updateDashboardVisuals();
             } catch (error) {
                 console.error("Connection failed:", error);
-                alert("Could not connect to Apps Script.");
+                alert("Could not connect to Apps Script database endpoint service loop.");
             }
         }
 
+        // Handle structural reconfiguration of timeline frames
         function switchTimeframeMode(targetMode) {
             if (currentTimelineMode === targetMode) return;
             currentTimelineMode = targetMode;
@@ -211,6 +214,7 @@
             resetRegionFilterAndRefresh();
         }
 
+        // Dynamically populates drop down choices depending on current timeline mode parameters
         function renderContextualDropdownOptions() {
             const selector = document.getElementById('contextSelect');
             selector.innerHTML = '';
@@ -283,6 +287,7 @@
             renderTableRowsOnly();
         }
 
+        // Resolves targeted partition dataset arrays matching active selection boundaries
         function getTimelineBaseDataset() {
             const selectorElement = document.getElementById('contextSelect');
             if (!selectorElement || !selectorElement.value) return [];
@@ -316,6 +321,7 @@
             return [];
         }
 
+        // Core Rendering Flow for Key Charts and KPIs
         function updateDashboardVisuals() {
             const filteredSet = getTimelineBaseDataset();
             const selectorVal = document.getElementById('contextSelect').value;
@@ -381,6 +387,7 @@
             document.getElementById('highestRegion').innerText = maxCount > 0 ? `${highestReg} (${maxCount} Done)` : '0 Done Found';
             document.getElementById('lowestRegion').innerText = filteredSet.length > 0 ? `${lowestReg} (${minCount === 999999 ? 0 : minCount} Done)` : '0 Done Found';
 
+            // Distinctive highlight colors for highest and lowest performant parameters
             const barColors = regionLabels.map(label => {
                 if (maxCount === 0) return '#3b82f6';
                 if (label === lowestReg && maxCount !== minCount) return '#f43f5e';
@@ -405,13 +412,13 @@
                 }
             };
 
-            // CHART 1: TOTAL COUNT
+            // CHART 1: REGION COMPLETED VOLUMES BAR
             if (regionChartContext) regionChartContext.destroy();
             regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ label: 'Total PMs Done', data: regionDoneValues, backgroundColor: barColors, borderRadius: 6, barThickness: 50 }]
+                    datasets: [{ label: 'Total PMs Done', data: regionDoneValues, backgroundColor: barColors, borderRadius: 6, barThickness: 45 }]
                 },
                 options: {
                     responsive: true,
@@ -436,13 +443,13 @@
                 }
             });
 
-            // CHART 2: COMPLIANCE RATE PERCENTAGE
+            // CHART 2: REGION COMPLIANCE PERFORMANCE RATE PERCENTAGE
             if (complianceChartContext) complianceChartContext.destroy();
             complianceChartContext = new Chart(document.getElementById('complianceRateChart'), {
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ label: 'Compliance Rate (%)', data: regionRatePercentages, backgroundColor: '#73c2fb', borderRadius: 6, barThickness: 50 }]
+                    datasets: [{ label: 'Compliance Rate (%)', data: regionRatePercentages, backgroundColor: '#73c2fb', borderRadius: 6, barThickness: 45 }]
                 },
                 options: {
                     responsive: true,
@@ -467,7 +474,7 @@
                 }
             });
 
-            // CHART 3: RCA DOUGHNUT (Balanced width + right alignment configuration)
+            // CHART 3: RCA THICKENED DOUGHNUT (Balanced ring width cutout ratio config)
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
@@ -488,7 +495,11 @@
                 type: 'doughnut',
                 data: {
                     labels: rcaLabels.length ? rcaLabels : ['100% Operational Compliance'],
-                    datasets: [{ data: rcaDataValues.length ? rcaDataValues : [1], backgroundColor: rcaDataValues.length ? ['#2979ff', '#fff913', '#fa8072', '#f2efea', '#85bb65'] : ['#1e293b'], borderWidth: 0 }]
+                    datasets: [{ 
+                        data: rcaDataValues.length ? rcaDataValues : [1], 
+                        backgroundColor: rcaDataValues.length ? ['#3b82f6', '#f59e0b', '#ef4444', '#10b981', '#a855f7'] : ['#1e293b'], 
+                        borderWidth: 0 
+                    }]
                 },
                 options: {  
                     responsive: true,  
@@ -500,19 +511,21 @@
                         },
                         datalabels: {
                             display: hasMissedPms,  
-                            color: '#000000',
-                            font: { weight: 'bold', size: 12 },
-                            textShadowColor: 'rgba(0, 0, 0, 0.7)',
+                            color: '#ffffff',
+                            font: { weight: 'bold', size: 11 },
+                            textShadowColor: 'rgba(0, 0, 0, 0.8)',
+                            textShadowBlur: 3,
                             formatter: function(value) { return value; }
                         }
                     },  
-                    cutout: '50%' // Slighly hollowed out more to give text parameters maximum room
+                    cutout: '55%' // Enhanced ring layout thickness adjustment (Changed from '50%')
                 }
             });
 
             renderTableRowsOnly();
         }
 
+        // Resolves nested filters intersection state matrices
         function getActiveFilteredData() {
             let results = getTimelineBaseDataset();
 
@@ -540,34 +553,36 @@
             return results;
         }
 
+        // Populates tabular equipment rows tracking indexes
         function renderTableRowsOnly() {
             const rowsToRender = getActiveFilteredData();
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             
             if (rowsToRender.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-sm text-slate-500 font-medium">No matching records match the chosen criteria.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-sm text-slate-500 font-medium">No records match the chosen filter parameters.</td></tr>`;
                 return;
             }
 
             rowsToRender.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm";
+                tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm transition-colors";
                 const isDone = row.status && row.status.trim().toUpperCase() === 'DONE';
                 const rcaDisplay = (row.rca_on_non_compliance && row.rca_on_non_compliance.trim() !== "" && row.rca_on_non_compliance.trim() !== "-") ? row.rca_on_non_compliance.trim() : "-";
                 
                 tr.innerHTML = `
-                    <td class="px-6 py-1.2 font-bold text-white">${row.equipment_no || '-'}</td>
-                    <td class="px-6 py-1.2">${row.pm_type || '-'}</td>
-                    <td class="px-6 py-1.2">${row.location || '-'}</td>
-                    <td class="px-6 py-1.2 text-slate-400">${row.region || '-'}</td>
-                    <td class="px-6 py-1.2"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
-                    <td class="px-6 py-1.2 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
+                    <td class="px-6 py-2 font-bold text-white tracking-wide">${row.equipment_no || '-'}</td>
+                    <td class="px-6 py-2">${row.pm_type || '-'}</td>
+                    <td class="px-6 py-2 text-slate-300">${row.location || '-'}</td>
+                    <td class="px-6 py-2 text-slate-400">${row.region || '-'}</td>
+                    <td class="px-6 py-2"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
+                    <td class="px-6 py-2 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
                 `;
                 tableBody.appendChild(tr);
             });
         }
 
+        // Raw CSV Exporter and Spreadsheet Downloader Utility Function
         function exportTableToCSV() {
             const currentFilteredData = getActiveFilteredData();
             if (currentFilteredData.length === 0) {
@@ -608,6 +623,7 @@
             document.body.removeChild(linkElement);
         }
 
+        // CHART 4: CONTEXTUAL LOOKBACK HISTORICAL COMPLIANCE TIMELINE LINE CHART
         function generateContextualTrendChart(dropdownSelection) {
             let labels = [];
             let datasetValues = [];
@@ -658,11 +674,18 @@
                         label: 'Compliance Rate',
                         data: datasetValues,
                         borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
                         borderWidth: 3,
-                        pointRadius: 5,
-                        pointBackgroundColor: '#60a5fa',
-                        tension: 0.15,
+                        // Custom dynamic index callback parameters highlighting endpoint terminal nodes
+                        pointRadius: (context) => {
+                            const lastIdx = context.dataset.data.length - 1;
+                            return context.dataIndex === lastIdx ? 7 : 4;
+                        },
+                        pointBackgroundColor: (context) => {
+                            const lastIdx = context.dataset.data.length - 1;
+                            return context.dataIndex === lastIdx ? '#10b981' : '#3b82f6';
+                        },
+                        tension: 0.2,
                         fill: true
                     }]
                 },
@@ -676,7 +699,7 @@
                             align: 'top',
                             anchor: 'center',
                             color: '#ffffff',
-                            font: { weight: 'bold', size: 11 },
+                            font: { weight: 'bold', size: 10 },
                             offset: 6,
                             formatter: function(value) { return value + '%'; }
                         }
