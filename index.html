@@ -16,16 +16,16 @@
             <p class="text-xs text-slate-400">Live PM Compliance Monitoring</p>
         </div>
         
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full xl:w-auto">
-            <div class="flex bg-slate-950/50 p-1 rounded-xl border border-slate-700 text-xs font-semibold">
-                <button id="timeframeWEEK" onclick="switchTimeframeMode('WEEK')" class="px-4 py-2 rounded-lg transition-all cursor-pointer bg-blue-500 text-white font-bold shadow">Weekly</button>
-                <button id="timeframeMONTH" onclick="switchTimeframeMode('MONTH')" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Monthly</button>
-                <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Year-to-Date (YTD)</button>
+        <div class="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto self-stretch sm:self-auto">
+            <div class="flex bg-slate-950/50 p-1 rounded-xl border border-slate-700 text-xs font-semibold w-full sm:w-auto justify-between sm:justify-start">
+                <button id="timeframeWEEK" onclick="switchTimeframeMode('WEEK')" class="px-4 py-2 rounded-lg transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center">Weekly</button>
+                <button id="timeframeMONTH" onclick="switchTimeframeMode('MONTH')" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">Monthly</button>
+                <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">YTD</button>
             </div>
 
-            <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700 flex-1 sm:flex-initial">
-                <label id="selectorLabel" for="contextSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
-                <select id="contextSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[150px] flex-1 sm:flex-initial">
+            <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700 w-full sm:w-auto">
+                <label id="selectorLabel" for="contextSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2 whitespace-nowrap">Select Target Week:</label>
+                <select id="contextSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[140px] w-full sm:w-auto">
                     </select>
             </div>
         </div>
@@ -67,12 +67,12 @@
                 <div class="h-64 relative"><canvas id="complianceRateChart"></canvas></div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-4 shadow-lg">
                 <h3 class="text-md font-semibold text-white mb-2">Non-Compliance Root Causes (RCA)</h3>
                 <div class="h-64 relative"><canvas id="rcaChart"></canvas></div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-2 shadow-lg">
                 <h3 id="chartTitleTrend" class="text-md font-semibold text-white mb-2">Weekly Compliance Trend (Last 4 Weeks)</h3>
                 <div class="h-64 relative"><canvas id="trendChart"></canvas></div>
             </div>
@@ -148,11 +148,8 @@
         let uniqueWeeksChronological = [];
         
         let activeStatusTab = 'ALL'; 
+        let currentTimelineMode = 'WEEK'; 
         
-        // NEW TIME TRACKING STATE ENGINE PROPERTIES
-        let currentTimelineMode = 'WEEK'; // Options: 'WEEK' | 'MONTH' | 'YTD'
-        
-        // Standardized Manufacturing Week-to-Month Boundaries Tally Configuration Map
         const monthlyBoundariesMap = [
             { name: "January", weeks: [1, 2, 3, 4] },
             { name: "February", weeks: [5, 6, 7, 8] },
@@ -173,9 +170,6 @@
                 const response = await fetch(API_URL);
                 fullDatabaseRecords = await response.json();
                 
-                console.log("Database Records Synchronized:", fullDatabaseRecords);
-                
-                // Track Unique Weeks Chronologically out of raw rows
                 uniqueWeeksChronological = [...new Set(fullDatabaseRecords.map(row => {
                     if (row.week === undefined || row.week === null || row.week === "") return null;
                     const match = String(row.week).replace(/\D/g, "");
@@ -187,42 +181,36 @@
                 document.getElementById('dashboardMain').classList.remove('hidden');
                 document.getElementById('filterBadge').classList.remove('hidden');
                 
-                // Render dropdown with initialized WEEK layout settings
                 renderContextualDropdownOptions();
                 updateDashboardVisuals();
             } catch (error) {
                 console.error("Connection failed:", error);
-                alert("Could not connect to Apps Script. Verify web app execution deployment links.");
+                alert("Could not connect to Apps Script.");
             }
         }
 
-        // Handles Mode Toggling Updates across Top Control Segment Tabs
         function switchTimeframeMode(targetMode) {
             if (currentTimelineMode === targetMode) return;
             currentTimelineMode = targetMode;
 
-            // Handle UI Class Accent Swap Shifts 
             ['WEEK', 'MONTH', 'YTD'].forEach(mode => {
                 const el = document.getElementById(`timeframe${mode}`);
                 if (mode === targetMode) {
-                    el.className = "px-4 py-2 rounded-lg transition-all cursor-pointer bg-blue-500 text-white font-bold shadow";
+                    el.className = "px-4 py-2 rounded-lg transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center";
                 } else {
-                    el.className = "px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer";
+                    el.className = "px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center";
                 }
             });
 
-            // Adjust Field Headers Labels dynamically based on focus
             const dropdownLabel = document.getElementById('selectorLabel');
             if (targetMode === 'WEEK') dropdownLabel.textContent = "Select Target Week:";
             if (targetMode === 'MONTH') dropdownLabel.textContent = "Select Target Month:";
             if (targetMode === 'YTD') dropdownLabel.textContent = "Analyze YTD Through:";
 
-            // Rebuild selection choices and recalculate canvas drawings
             renderContextualDropdownOptions();
             resetRegionFilterAndRefresh();
         }
 
-        // Dynamically rebuilds selection input choices based on active mode context rules
         function renderContextualDropdownOptions() {
             const selector = document.getElementById('contextSelect');
             selector.innerHTML = '';
@@ -242,8 +230,6 @@
                 });
             } 
             else if (currentTimelineMode === 'MONTH') {
-                // Determine which months have operational matching numbers present in sheet data logs
-                let addedMonthsCount = 0;
                 monthlyBoundariesMap.forEach((monthObj) => {
                     const hasDataInMonth = monthObj.weeks.some(wk => uniqueWeeksChronological.includes(wk));
                     if (hasDataInMonth) {
@@ -251,16 +237,13 @@
                         option.value = monthObj.name;
                         option.textContent = monthObj.name;
                         selector.appendChild(option);
-                        addedMonthsCount++;
                     }
                 });
-                // Default select the last available month entry 
                 if (selector.options.length > 0) {
                     selector.options[selector.options.length - 1].selected = true;
                 }
             } 
             else if (currentTimelineMode === 'YTD') {
-                // YTD values benchmark milestones built forward up to active checkpoints
                 uniqueWeeksChronological.forEach((wk, index) => {
                     const option = document.createElement('option');
                     option.value = wk;
@@ -300,7 +283,6 @@
             renderTableRowsOnly();
         }
 
-        // Central Processing Array: Evaluates and isolates targeted row groups matching calculations
         function getTimelineBaseDataset() {
             const selectorElement = document.getElementById('contextSelect');
             if (!selectorElement || !selectorElement.value) return [];
@@ -336,9 +318,8 @@
 
         function updateDashboardVisuals() {
             const filteredSet = getTimelineBaseDataset();
-            
-            // Adjust header display context descriptions dynamically to guide user focus
             const selectorVal = document.getElementById('contextSelect').value;
+            
             document.getElementById('kpiLabelCompliance').innerText = `Overall ${currentTimelineMode} Compliance`;
             document.getElementById('chartTitleVolume').innerText = `Total PMs Done by Region (${currentTimelineMode})`;
             document.getElementById('chartTitlePerformance').innerText = `PM Compliance Rate by Region (% - ${currentTimelineMode})`;
@@ -348,14 +329,12 @@
             if (currentTimelineMode === 'YTD') trendTitle = "Progressive YTD Accumulation Steps";
             document.getElementById('chartTitleTrend').innerText = trendTitle;
 
-            // Summary Calculations
             const globalDoneCount = filteredSet.filter(r => r.status && r.status.trim().toUpperCase() === "DONE").length;
             const globalTotalPlanned = filteredSet.length;
             const globalPercentage = globalTotalPlanned > 0 ? Math.round((globalDoneCount / globalTotalPlanned) * 100) : 0;
             
             document.getElementById('totalPms').innerText = `${globalPercentage}% (${globalDoneCount}/${globalTotalPlanned})`;
 
-            // Generate Historical Trend Charts
             generateContextualTrendChart(selectorVal);
 
             const discreteRegions = [...new Set(filteredSet.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
@@ -432,7 +411,7 @@
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ label: 'Total PMs Done', data: regionDoneValues, backgroundColor: barColors, borderRadius: 6, barThickness: 20 }]
+                    datasets: [{ label: 'Total PMs Done', data: regionDoneValues, backgroundColor: barColors, borderRadius: 6, barThickness: 50 }]
                 },
                 options: {
                     responsive: true,
@@ -463,7 +442,7 @@
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ label: 'Compliance Rate (%)', data: regionRatePercentages, backgroundColor: '#6366f1', borderRadius: 6, barThickness: 20 }]
+                    datasets: [{ label: 'Compliance Rate (%)', data: regionRatePercentages, backgroundColor: '#6366f1', borderRadius: 6, barThickness: 50 }]
                 },
                 options: {
                     responsive: true,
@@ -488,15 +467,14 @@
                 }
             });
 
-            // CHART 3: RCA DOUGHNUT
+            // CHART 3: RCA DOUGHNUT (Moved categories to the side using position: 'right')
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
                 let rawRca = item.rca_on_non_compliance || "";
-                const cleanRca = rawRca.trim();
                 
                 if (cleanStatus !== "DONE") {
-                    const reason = (cleanRca === "" || cleanRca === "-") ? "Pending Review" : cleanRca;
+                    const reason = (rawRca.trim() === "" || rawRca.trim() === "-") ? "Pending Review" : rawRca.trim();
                     rcaTallies[reason] = (rcaTallies[reason] || 0) + 1;
                 }
             });
@@ -516,7 +494,10 @@
                     responsive: true,  
                     maintainAspectRatio: false,  
                     plugins: {  
-                        legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 10, font: { size: 11 } } },
+                        legend: { 
+                            position: 'right', // Relocated from 'bottom' to 'right' side
+                            labels: { color: '#94a3b8', boxWidth: 10, font: { size: 11 } } 
+                        },
                         datalabels: {
                             display: hasMissedPms,  
                             color: '#ffffff',
@@ -533,23 +514,19 @@
             renderTableRowsOnly();
         }
 
-        // Global Table Processing Engine: Combines filters with timeframe settings
         function getActiveFilteredData() {
             let results = getTimelineBaseDataset();
 
-            // Apply Cross-Filtering
             if (selectedRegionFilter !== null) {
                 results = results.filter(row => row.region && row.region.trim() === selectedRegionFilter);
             }
 
-            // Apply Status Tab Filtering
             if (activeStatusTab === 'DONE') {
                 results = results.filter(row => row.status && row.status.trim().toUpperCase() === 'DONE');
             } else if (activeStatusTab === 'MISSED') {
                 results = results.filter(row => !row.status || row.status.trim().toUpperCase() !== 'DONE');
             }
 
-            // Apply Text Search Box Query Filtering
             const searchQuery = document.getElementById('tableSearchInput').value.trim().toLowerCase();
             if (searchQuery !== '') {
                 results = results.filter(row => {
@@ -632,14 +609,12 @@
             document.body.removeChild(linkElement);
         }
 
-        // Contextual Trend Line Chart Generator Engine
         function generateContextualTrendChart(dropdownSelection) {
             let labels = [];
             let datasetValues = [];
 
             if (currentTimelineMode === 'WEEK' || currentTimelineMode === 'YTD') {
-                // Return dynamic moving average for weeks
-                const currentWeekInt = currentTimelineMode === 'WEEK' ? parseInt(dropdownSelection, 10) : parseInt(dropdownSelection, 10);
+                const currentWeekInt = parseInt(dropdownSelection, 10);
                 const currentIdx = uniqueWeeksChronological.indexOf(currentWeekInt);
                 
                 if (currentIdx !== -1) {
@@ -659,7 +634,6 @@
                 }
             } 
             else if (currentTimelineMode === 'MONTH') {
-                // Render trend performance comparison for all operational months
                 monthlyBoundariesMap.forEach(monthObj => {
                     const monthDataset = fullDatabaseRecords.filter(row => {
                         if (!row.week) return false;
