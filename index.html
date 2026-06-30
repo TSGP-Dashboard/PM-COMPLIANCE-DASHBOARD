@@ -71,23 +71,50 @@
         </section>
 
         <section class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-            <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <h3 class="text-md font-semibold text-white">Asset-Level PM Tracking Log</h3>
-                <div id="activeFilterIndicator" class="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg hidden flex items-center gap-2">
-                    <span>Filtering Table to: <strong id="filteredRegionName"></strong></span>
-                    <button onclick="clearActiveRegionFilter()" class="underline hover:text-white font-bold cursor-pointer">Clear Filter</button>
+            <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h3 class="text-md font-semibold text-white">Asset-Level PM Tracking Log</h3>
+                    <div id="activeFilterIndicator" class="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg hidden flex items-center gap-2">
+                        <span>Region: <strong id="filteredRegionName"></strong></span>
+                        <button onclick="clearActiveRegionFilter()" class="underline hover:text-white font-bold cursor-pointer">Clear</button>
+                    </div>
+                </div>
+                
+                <button onclick="exportTableToCSV()" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    Export Filtered Log (.CSV)
+                </button>
+            </div>
+
+            <div class="p-4 bg-slate-900/30 border-b border-slate-700/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                <div class="flex bg-slate-950/50 p-1 rounded-lg border border-slate-700 text-xs font-medium max-w-max">
+                    <button id="tabAll" onclick="setTableStatusTab('ALL')" class="px-3 py-1.5 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-semibold shadow">All PMs</button>
+                    <button id="tabDone" onclick="setTableStatusTab('DONE')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Completed Only</button>
+                    <button id="tabMissed" onclick="setTableStatusTab('MISSED')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Missed / Pending</button>
+                </div>
+                
+                <div class="relative flex-1 max-w-sm">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+                        </svg>
+                    </span>
+                    <input type="text" id="tableSearchInput" oninput="renderTableRowsOnly()" placeholder="Search equipment, type, or location..." class="w-full bg-slate-950/60 text-slate-200 text-xs border border-slate-700 rounded-lg pl-9 pr-4 py-2 focus:outline-none focus:border-blue-500 placeholder-slate-500 transition-all">
                 </div>
             </div>
+
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm text-slate-300">
                     <thead class="bg-slate-900/40 text-xs uppercase text-slate-400 border-b border-slate-700">
                         <tr>
-                            <th class="px-6 py-1.5">Equipment Type</th>
-                            <th class="px-6 py-1.5">PM Type</th>
-                            <th class="px-6 py-1.5">Location</th>
-                            <th class="px-6 py-1.5">Region</th>
-                            <th class="px-6 py-1.5">Status</th>
-                            <th class="px-6 py-1.5">RCA on Non-Compliance</th>
+                            <th class="px-6 py-2.5">Equipment Type</th>
+                            <th class="px-6 py-2.5">PM Type</th>
+                            <th class="px-6 py-2.5">Location</th>
+                            <th class="px-6 py-2.5">Region</th>
+                            <th class="px-6 py-2.5">Status</th>
+                            <th class="px-6 py-2.5">RCA on Non-Compliance</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="divide-y divide-slate-700/50"></tbody>
@@ -97,10 +124,10 @@
     </main>
 
     <script>
-        // 🛠️ REGISTER THE DATALABELS PLUGIN GLOBALLY TO CHART.JS
+        // REGISTER THE DATALABELS PLUGIN GLOBALLY TO CHART.JS
         Chart.register(ChartDataLabels);
 
-        // ⚠️ YOUR GOOGLE APPS SCRIPT WEB APP URL:
+        // YOUR GOOGLE APPS SCRIPT WEB APP URL:
         const API_URL = "https://script.google.com/macros/s/AKfycbzanFzLTeJQKaG7uPXTA12BNKaxiqJ7UfJ3sqQv02JYRo2BW1w63UDT1erCi6iDo3hlUQ/exec";
 
         let fullDatabaseRecords = [];
@@ -111,6 +138,9 @@
         
         let selectedRegionFilter = null; 
         let uniqueWeeksChronological = [];
+        
+        // UPGRADE 1: Operational Global Memory Table Filter State Trackers
+        let activeStatusTab = 'ALL'; 
 
         async function fetchLiveSheetData() {
             try {
@@ -165,6 +195,9 @@
         function resetRegionFilterAndRefresh() {
             selectedRegionFilter = null;
             document.getElementById('activeFilterIndicator').classList.add('hidden');
+            // Reset input values on macro changes
+            document.getElementById('tableSearchInput').value = '';
+            setTableStatusTab('ALL');
             updateDashboardVisuals();
         }
 
@@ -172,6 +205,27 @@
             selectedRegionFilter = null;
             document.getElementById('activeFilterIndicator').classList.add('hidden');
             renderTableRowsOnly(); 
+        }
+
+        // UPGRADE 1 Subroutine: Handles tab styling and sets filter memory
+        function setTableStatusTab(tabName) {
+            activeStatusTab = tabName;
+            
+            // Clear current selection highlight rules
+            const tabs = ['tabAll', 'tabDone', 'tabMissed'];
+            tabs.forEach(t => {
+                const el = document.getElementById(t);
+                el.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer";
+            });
+
+            // Set current active accent layout rules
+            let activeEl = document.getElementById('tabAll');
+            if (tabName === 'DONE') activeEl = document.getElementById('tabDone');
+            if (tabName === 'MISSED') activeEl = document.getElementById('tabMissed');
+            
+            activeEl.className = "px-3 py-1.5 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-semibold shadow";
+            
+            renderTableRowsOnly();
         }
 
         function updateDashboardVisuals() {
@@ -193,7 +247,7 @@
             
             document.getElementById('totalPms').innerText = `${globalPercentage}% (${globalDoneCount}/${globalTotalPlanned})`;
 
-            // 📈 GENERATE HISTORICAL TREND LINE CHART WITH VISIBLE LABELS
+            // GENERATE HISTORICAL TREND LINE CHART WITH VISIBLE LABELS
             generateDetailedTrendChart(activeWeek);
 
             const discreteRegions = [...new Set(filteredSet.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
@@ -371,22 +425,64 @@
             renderTableRowsOnly();
         }
 
-        function renderTableRowsOnly() {
+        // UPGRADE 1 Core Processing Array: Evaluates and renders combined multidimensional array logic
+        function getActiveFilteredData() {
             const selectorElement = document.getElementById('weekSelect');
+            if(!selectorElement || !selectorElement.value || selectorElement.value === "No Data Found") return [];
+            
             const activeWeek = parseInt(selectorElement.value, 10);
             
-            let rowsToRender = fullDatabaseRecords.filter(row => {
+            // 1. Dropdown Target Week Dimension
+            let results = fullDatabaseRecords.filter(row => {
                 if(row.week === undefined || row.week === null || row.week === "") return false;
                 return parseInt(String(row.week).replace(/\D/g, ""), 10) === activeWeek;
             });
 
+            // 2. Clicked Chart Region Dimension
             if (selectedRegionFilter !== null) {
-                rowsToRender = rowsToRender.filter(row => row.region && row.region.trim() === selectedRegionFilter);
+                results = results.filter(row => row.region && row.region.trim() === selectedRegionFilter);
             }
 
+            // 3. Quick Status Switch Tab Dimension
+            if (activeStatusTab === 'DONE') {
+                results = results.filter(row => row.status && row.status.trim().toUpperCase() === 'DONE');
+            } else if (activeStatusTab === 'MISSED') {
+                results = results.filter(row => !row.status || row.status.trim().toUpperCase() !== 'DONE');
+            }
+
+            // 4. Live Text Search Query Box Match Dimension
+            const searchQuery = document.getElementById('tableSearchInput').value.trim().toLowerCase();
+            if (searchQuery !== '') {
+                results = results.filter(row => {
+                    const equip = String(row.equipment_no || '').toLowerCase();
+                    const pmType = String(row.pm_type || '').toLowerCase();
+                    const loc = String(row.location || '').toLowerCase();
+                    const rca = String(row.rca_on_non_compliance || '').toLowerCase();
+                    const reg = String(row.region || '').toLowerCase();
+                    
+                    return equip.includes(searchQuery) || 
+                           pmType.includes(searchQuery) || 
+                           loc.includes(searchQuery) || 
+                           rca.includes(searchQuery) ||
+                           reg.includes(searchQuery);
+                });
+            }
+
+            return results;
+        }
+
+        function renderTableRowsOnly() {
+            const rowsToRender = getActiveFilteredData();
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             
+            if (rowsToRender.length === 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="6" class="px-6 py-8 text-center text-sm text-slate-500 font-medium">No operational matching entries found for selected criteria.</td>`;
+                tableBody.appendChild(tr);
+                return;
+            }
+
             rowsToRender.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm";
@@ -396,18 +492,78 @@
                 const rcaDisplay = (rcaValue.trim() !== "" && rcaValue.trim() !== "-") ? rcaValue.trim() : "-";
                 
                 tr.innerHTML = `
-                    <td class="px-6 py-1.2 font-bold text-white">${row.equipment_no || '-'}</td>
-                    <td class="px-6 py-1.2">${row.pm_type || '-'}</td>
-                    <td class="px-6 py-1.2">${row.location || '-'}</td>
-                    <td class="px-6 py-1.2 text-slate-400">${row.region || '-'}</td>
-                    <td class="px-6 py-1.2"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
-                    <td class="px-6 py-1.2 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
+                    <td class="px-6 py-1.5 font-bold text-white">${row.equipment_no || '-'}</td>
+                    <td class="px-6 py-1.5">${row.pm_type || '-'}</td>
+                    <td class="px-6 py-1.5">${row.location || '-'}</td>
+                    <td class="px-6 py-1.5 text-slate-400">${row.region || '-'}</td>
+                    <td class="px-6 py-1.5"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
+                    <td class="px-6 py-1.5 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
                 `;
                 tableBody.appendChild(tr);
             });
         }
 
-        // Expanded Subroutine function to generate a fully labeled Trend Chart with explicit dataset values
+        // UPGRADE 3 Data Export Engine: Converts active state arrays to formatted .csv attachments
+        function exportTableToCSV() {
+            const currentFilteredData = getActiveFilteredData();
+            if (currentFilteredData.length === 0) {
+                alert("There are no visible matching records available to export.");
+                return;
+            }
+
+            const selectorElement = document.getElementById('weekSelect');
+            const targetWeekStr = selectorElement ? selectorElement.value : 'Data';
+
+            // Define CSV Headers mapping exactly to database structural keys
+            const headers = ["Equipment Type/No", "PM Type", "Location", "Region", "Status", "RCA on Non-Compliance", "Week Context"];
+            
+            // Build text payload layout block array
+            const csvRows = [];
+            csvRows.push(headers.join(',')); // Attach row header columns
+
+            currentFilteredData.forEach(item => {
+                const values = [
+                    item.equipment_no || '-',
+                    item.pm_type || '-',
+                    item.location || '-',
+                    item.region || '-',
+                    item.status || 'Pending',
+                    item.rca_on_non_compliance || '-',
+                    item.week || '-'
+                ];
+
+                // Escape quotes and wrap items to block punctuation breakage inside cells
+                const cleanEscapedRow = values.map(val => {
+                    let textString = String(val).replace(/"/g, '""'); // Escape standard quote marks
+                    if (textString.includes(',') || textString.includes('\n') || textString.includes('"')) {
+                        textString = `"${textString}"`;
+                    }
+                    return textString;
+                });
+
+                csvRows.push(cleanEscapedRow.join(','));
+            });
+
+            // Convert string block into data blob attachment pipeline
+            const csvContentString = "\uFEFF" + csvRows.join('\n'); // Add UTF-8 BOM to keep characters clean in Excel
+            const blobBlobObj = new Blob([csvContentString], { type: 'text/csv;charset=utf-8;' });
+            
+            const linkElement = document.createElement("a");
+            const objectURL = URL.createObjectURL(blobBlobObj);
+            
+            // Calculate dynamic file descriptor naming properties
+            let regionalFileSuffix = selectedRegionFilter ? `_${selectedRegionFilter.replace(/\s+/g, '_')}` : '';
+            let statusSuffix = `_${activeStatusTab.toLowerCase()}`;
+            
+            linkElement.setAttribute("href", objectURL);
+            linkElement.setAttribute("download", `PM_Compliance_Week_${targetWeekStr}${regionalFileSuffix}${statusSuffix}_Report.csv`);
+            
+            document.body.appendChild(linkElement);
+            linkElement.click(); // Programmatic dispatch trigger click
+            document.body.removeChild(linkElement);
+        }
+
+        // Generate Detailed Trend Chart
         function generateDetailedTrendChart(currentSelectedWeek) {
             const currentIdx = uniqueWeeksChronological.indexOf(currentSelectedWeek);
             if (currentIdx === -1) return;
