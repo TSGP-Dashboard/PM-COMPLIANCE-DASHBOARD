@@ -67,12 +67,12 @@
                 <div class="h-64 relative"><canvas id="complianceRateChart"></canvas></div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-4 shadow-lg">
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
                 <h3 class="text-md font-semibold text-white mb-2">Non-Compliance Root Causes (RCA)</h3>
                 <div class="h-64 relative"><canvas id="rcaChart"></canvas></div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-2 shadow-lg">
+            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
                 <h3 id="chartTitleTrend" class="text-md font-semibold text-white mb-2">Weekly Compliance Trend (Last 4 Weeks)</h3>
                 <div class="h-64 relative"><canvas id="trendChart"></canvas></div>
             </div>
@@ -467,7 +467,7 @@
                 }
             });
 
-            // CHART 3: RCA DOUGHNUT (Moved categories to the side using position: 'right')
+            // CHART 3: RCA DOUGHNUT (Balanced width + right alignment configuration)
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
@@ -488,26 +488,26 @@
                 type: 'doughnut',
                 data: {
                     labels: rcaLabels.length ? rcaLabels : ['100% Operational Compliance'],
-                    datasets: [{ data: rcaDataValues.length ? rcaDataValues : [1], backgroundColor: rcaDataValues.length ? ['#f59e0b', '#ef4444', '#a855f7', '#06b6d4'] : ['#1e293b'], borderWidth: 0 }]
+                    datasets: [{ data: rcaDataValues.length ? rcaDataValues : [1], backgroundColor: rcaDataValues.length ? ['#f59e0b', '#ef4444', '#a855f7', '#06b6d4', '#ffe135'] : ['#1e293b'], borderWidth: 0 }]
                 },
                 options: {  
                     responsive: true,  
                     maintainAspectRatio: false,  
                     plugins: {  
                         legend: { 
-                            position: 'right', // Relocated from 'bottom' to 'right' side
-                            labels: { color: '#94a3b8', boxWidth: 10, font: { size: 11 } } 
+                            position: 'right', 
+                            labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } } 
                         },
                         datalabels: {
                             display: hasMissedPms,  
                             color: '#ffffff',
-                            font: { weight: 'bold', size: 12 },
+                            font: { weight: 'bold', size: 11 },
                             textShadowColor: 'rgba(0, 0, 0, 0.7)',
                             textShadowBlur: 4,
                             formatter: function(value) { return value; }
                         }
                     },  
-                    cutout: '65%'  
+                    cutout: '75%' // Slighly hollowed out more to give text parameters maximum room
                 }
             });
 
@@ -558,12 +558,12 @@
                 const rcaDisplay = (row.rca_on_non_compliance && row.rca_on_non_compliance.trim() !== "" && row.rca_on_non_compliance.trim() !== "-") ? row.rca_on_non_compliance.trim() : "-";
                 
                 tr.innerHTML = `
-                    <td class="px-6 py-1.5 font-bold text-white">${row.equipment_no || '-'}</td>
-                    <td class="px-6 py-1.5">${row.pm_type || '-'}</td>
-                    <td class="px-6 py-1.5">${row.location || '-'}</td>
-                    <td class="px-6 py-1.5 text-slate-400">${row.region || '-'}</td>
-                    <td class="px-6 py-1.5"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
-                    <td class="px-6 py-1.5 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
+                    <td class="px-6 py-1.2 font-bold text-white">${row.equipment_no || '-'}</td>
+                    <td class="px-6 py-1.2">${row.pm_type || '-'}</td>
+                    <td class="px-6 py-1.2">${row.location || '-'}</td>
+                    <td class="px-6 py-1.2 text-slate-400">${row.region || '-'}</td>
+                    <td class="px-6 py-1.2"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
+                    <td class="px-6 py-1.2 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
                 `;
                 tableBody.appendChild(tr);
             });
