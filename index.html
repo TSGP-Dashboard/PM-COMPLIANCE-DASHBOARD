@@ -10,16 +10,24 @@
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased">
 
-    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-50">
+    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-8 py-4 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sticky top-0 z-50">
         <div>
             <h1 class="text-2xl font-bold tracking-tight text-white">PM Compliance Dashboard</h1>
             <p class="text-xs text-slate-400">Live PM Compliance Monitoring</p>
         </div>
         
-        <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700">
-            <label for="weekSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
-            <select id="weekSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[130px]">
-                </select>
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full xl:w-auto">
+            <div class="flex bg-slate-950/50 p-1 rounded-xl border border-slate-700 text-xs font-semibold">
+                <button id="timeframeWEEK" onclick="switchTimeframeMode('WEEK')" class="px-4 py-2 rounded-lg transition-all cursor-pointer bg-blue-500 text-white font-bold shadow">Weekly</button>
+                <button id="timeframeMONTH" onclick="switchTimeframeMode('MONTH')" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Monthly</button>
+                <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Year-to-Date (YTD)</button>
+            </div>
+
+            <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700 flex-1 sm:flex-initial">
+                <label id="selectorLabel" for="contextSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2">Select Target Week:</label>
+                <select id="contextSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[150px] flex-1 sm:flex-initial">
+                    </select>
+            </div>
         </div>
     </header>
 
@@ -40,7 +48,7 @@
                 <h3 id="lowestRegion" class="text-1xl font-bold text-rose-400 mt-1">Calculating...</h3>
             </div>
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Overall Week Compliance</p>
+                <p id="kpiLabelCompliance" class="text-xs font-medium uppercase tracking-wider text-slate-400">Overall Week Compliance</p>
                 <h3 id="totalPms" class="text-1xl font-bold text-blue-400 mt-1">0%</h3>
             </div>
         </section>
@@ -48,14 +56,14 @@
         <section class="grid grid-cols-1 lg:grid-cols-6 gap-6">
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
                 <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-md font-semibold text-white">Total PMs Done by Region (Count)</h3>
+                    <h3 id="chartTitleVolume" class="text-md font-semibold text-white">Total PMs Done by Region (Count)</h3>
                     <span id="filterBadge" class="text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded hidden">Click bar to isolate</span>
                 </div>
                 <div class="h-64 relative"><canvas id="regionChart"></canvas></div>
             </div>
             
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <h3 class="text-md font-semibold text-white mb-2">PM Compliance Rate by Region (%)</h3>
+                <h3 id="chartTitlePerformance" class="text-md font-semibold text-white mb-2">PM Compliance Rate by Region (%)</h3>
                 <div class="h-64 relative"><canvas id="complianceRateChart"></canvas></div>
             </div>
 
@@ -65,7 +73,7 @@
             </div>
 
             <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <h3 class="text-md font-semibold text-white mb-2">Weekly Compliance Trend (Last 4 Weeks)</h3>
+                <h3 id="chartTitleTrend" class="text-md font-semibold text-white mb-2">Weekly Compliance Trend (Last 4 Weeks)</h3>
                 <div class="h-64 relative"><canvas id="trendChart"></canvas></div>
             </div>
         </section>
@@ -109,7 +117,7 @@
                 <table class="w-full text-left text-sm text-slate-300">
                     <thead class="bg-slate-900/40 text-xs uppercase text-slate-400 border-b border-slate-700">
                         <tr>
-                            <th class="px-6 py-2.5">Equipment Type</th>
+                            <th class="px-6 py-2.5">Equipment Type/No</th>
                             <th class="px-6 py-2.5">PM Type</th>
                             <th class="px-6 py-2.5">Location</th>
                             <th class="px-6 py-2.5">Region</th>
@@ -139,8 +147,26 @@
         let selectedRegionFilter = null; 
         let uniqueWeeksChronological = [];
         
-        // UPGRADE 1: Operational Global Memory Table Filter State Trackers
         let activeStatusTab = 'ALL'; 
+        
+        // NEW TIME TRACKING STATE ENGINE PROPERTIES
+        let currentTimelineMode = 'WEEK'; // Options: 'WEEK' | 'MONTH' | 'YTD'
+        
+        // Standardized Manufacturing Week-to-Month Boundaries Tally Configuration Map
+        const monthlyBoundariesMap = [
+            { name: "January", weeks: [1, 2, 3, 4] },
+            { name: "February", weeks: [5, 6, 7, 8] },
+            { name: "March", weeks: [9, 10, 11, 12, 13] },
+            { name: "April", weeks: [14, 15, 16, 17] },
+            { name: "May", weeks: [18, 19, 20, 21] },
+            { name: "June", weeks: [22, 23, 24, 25, 26] },
+            { name: "July", weeks: [27, 28, 29, 30] },
+            { name: "August", weeks: [31, 32, 33, 34] },
+            { name: "September", weeks: [35, 36, 37, 38, 39] },
+            { name: "October", weeks: [40, 41, 42, 43] },
+            { name: "November", weeks: [44, 45, 46, 47] },
+            { name: "December", weeks: [48, 49, 50, 51, 52] }
+        ];
 
         async function fetchLiveSheetData() {
             try {
@@ -149,12 +175,20 @@
                 
                 console.log("Database Records Synchronized:", fullDatabaseRecords);
                 
-                buildDynamicWeekSelector();
+                // Track Unique Weeks Chronologically out of raw rows
+                uniqueWeeksChronological = [...new Set(fullDatabaseRecords.map(row => {
+                    if (row.week === undefined || row.week === null || row.week === "") return null;
+                    const match = String(row.week).replace(/\D/g, "");
+                    return match ? parseInt(match, 10) : null;
+                }))].filter(wk => wk !== null && !isNaN(wk));
+                uniqueWeeksChronological.sort((a, b) => a - b);
                 
                 document.getElementById('loadingOverlay').classList.add('hidden');
                 document.getElementById('dashboardMain').classList.remove('hidden');
                 document.getElementById('filterBadge').classList.remove('hidden');
                 
+                // Render dropdown with initialized WEEK layout settings
+                renderContextualDropdownOptions();
                 updateDashboardVisuals();
             } catch (error) {
                 console.error("Connection failed:", error);
@@ -162,40 +196,84 @@
             }
         }
 
-        function buildDynamicWeekSelector() {
-            const selector = document.getElementById('weekSelect');
-            
-            uniqueWeeksChronological = [...new Set(fullDatabaseRecords.map(row => {
-                if (row.week === undefined || row.week === null || row.week === "") return null;
-                const match = String(row.week).replace(/\D/g, "");
-                return match ? parseInt(match, 10) : null;
-            }))].filter(wk => wk !== null && !isNaN(wk));
-            
-            uniqueWeeksChronological.sort((a, b) => a - b);
+        // Handles Mode Toggling Updates across Top Control Segment Tabs
+        function switchTimeframeMode(targetMode) {
+            if (currentTimelineMode === targetMode) return;
+            currentTimelineMode = targetMode;
+
+            // Handle UI Class Accent Swap Shifts 
+            ['WEEK', 'MONTH', 'YTD'].forEach(mode => {
+                const el = document.getElementById(`timeframe${mode}`);
+                if (mode === targetMode) {
+                    el.className = "px-4 py-2 rounded-lg transition-all cursor-pointer bg-blue-500 text-white font-bold shadow";
+                } else {
+                    el.className = "px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer";
+                }
+            });
+
+            // Adjust Field Headers Labels dynamically based on focus
+            const dropdownLabel = document.getElementById('selectorLabel');
+            if (targetMode === 'WEEK') dropdownLabel.textContent = "Select Target Week:";
+            if (targetMode === 'MONTH') dropdownLabel.textContent = "Select Target Month:";
+            if (targetMode === 'YTD') dropdownLabel.textContent = "Analyze YTD Through:";
+
+            // Rebuild selection choices and recalculate canvas drawings
+            renderContextualDropdownOptions();
+            resetRegionFilterAndRefresh();
+        }
+
+        // Dynamically rebuilds selection input choices based on active mode context rules
+        function renderContextualDropdownOptions() {
+            const selector = document.getElementById('contextSelect');
             selector.innerHTML = '';
-            
+
             if (uniqueWeeksChronological.length === 0) {
-                const option = document.createElement('option');
-                option.textContent = "No Data Found";
-                selector.appendChild(option);
+                selector.innerHTML = '<option>No Data Found</option>';
                 return;
             }
 
-            uniqueWeeksChronological.forEach((wk, index) => {
-                const option = document.createElement('option');
-                option.value = wk;
-                option.textContent = `Week ${wk}`;
-                if (index === uniqueWeeksChronological.length - 1) {
-                    option.selected = true;  
+            if (currentTimelineMode === 'WEEK') {
+                uniqueWeeksChronological.forEach((wk, index) => {
+                    const option = document.createElement('option');
+                    option.value = wk;
+                    option.textContent = `Week ${wk}`;
+                    if (index === uniqueWeeksChronological.length - 1) option.selected = true;  
+                    selector.appendChild(option);
+                });
+            } 
+            else if (currentTimelineMode === 'MONTH') {
+                // Determine which months have operational matching numbers present in sheet data logs
+                let addedMonthsCount = 0;
+                monthlyBoundariesMap.forEach((monthObj) => {
+                    const hasDataInMonth = monthObj.weeks.some(wk => uniqueWeeksChronological.includes(wk));
+                    if (hasDataInMonth) {
+                        const option = document.createElement('option');
+                        option.value = monthObj.name;
+                        option.textContent = monthObj.name;
+                        selector.appendChild(option);
+                        addedMonthsCount++;
+                    }
+                });
+                // Default select the last available month entry 
+                if (selector.options.length > 0) {
+                    selector.options[selector.options.length - 1].selected = true;
                 }
-                selector.appendChild(option);
-            });
+            } 
+            else if (currentTimelineMode === 'YTD') {
+                // YTD values benchmark milestones built forward up to active checkpoints
+                uniqueWeeksChronological.forEach((wk, index) => {
+                    const option = document.createElement('option');
+                    option.value = wk;
+                    option.textContent = `Up to Week ${wk}`;
+                    if (index === uniqueWeeksChronological.length - 1) option.selected = true;  
+                    selector.appendChild(option);
+                });
+            }
         }
 
         function resetRegionFilterAndRefresh() {
             selectedRegionFilter = null;
             document.getElementById('activeFilterIndicator').classList.add('hidden');
-            // Reset input values on macro changes
             document.getElementById('tableSearchInput').value = '';
             setTableStatusTab('ALL');
             updateDashboardVisuals();
@@ -207,38 +285,68 @@
             renderTableRowsOnly(); 
         }
 
-        // UPGRADE 1 Subroutine: Handles tab styling and sets filter memory
         function setTableStatusTab(tabName) {
             activeStatusTab = tabName;
-            
-            // Clear current selection highlight rules
             const tabs = ['tabAll', 'tabDone', 'tabMissed'];
             tabs.forEach(t => {
-                const el = document.getElementById(t);
-                el.className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer";
+                document.getElementById(t).className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer";
             });
 
-            // Set current active accent layout rules
             let activeEl = document.getElementById('tabAll');
             if (tabName === 'DONE') activeEl = document.getElementById('tabDone');
             if (tabName === 'MISSED') activeEl = document.getElementById('tabMissed');
             
             activeEl.className = "px-3 py-1.5 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-semibold shadow";
-            
             renderTableRowsOnly();
         }
 
+        // Central Processing Array: Evaluates and isolates targeted row groups matching calculations
+        function getTimelineBaseDataset() {
+            const selectorElement = document.getElementById('contextSelect');
+            if (!selectorElement || !selectorElement.value) return [];
+
+            const dropdownVal = selectorElement.value;
+
+            if (currentTimelineMode === 'WEEK') {
+                const targetWeek = parseInt(dropdownVal, 10);
+                return fullDatabaseRecords.filter(row => {
+                    if (!row.week) return false;
+                    return parseInt(String(row.week).replace(/\D/g, ""), 10) === targetWeek;
+                });
+            } 
+            else if (currentTimelineMode === 'MONTH') {
+                const targetMonthObj = monthlyBoundariesMap.find(m => m.name === dropdownVal);
+                if (!targetMonthObj) return [];
+                return fullDatabaseRecords.filter(row => {
+                    if (!row.week) return false;
+                    const normalizedWeek = parseInt(String(row.week).replace(/\D/g, ""), 10);
+                    return targetMonthObj.weeks.includes(normalizedWeek);
+                });
+            } 
+            else if (currentTimelineMode === 'YTD') {
+                const upToWeekBoundary = parseInt(dropdownVal, 10);
+                return fullDatabaseRecords.filter(row => {
+                    if (!row.week) return false;
+                    const normalizedWeek = parseInt(String(row.week).replace(/\D/g, ""), 10);
+                    return normalizedWeek >= 1 && normalizedWeek <= upToWeekBoundary;
+                });
+            }
+            return [];
+        }
+
         function updateDashboardVisuals() {
-            const selectorElement = document.getElementById('weekSelect');
-            if(!selectorElement.value || selectorElement.value === "No Data Found") return;  
+            const filteredSet = getTimelineBaseDataset();
             
-            const activeWeek = parseInt(selectorElement.value, 10);
+            // Adjust header display context descriptions dynamically to guide user focus
+            const selectorVal = document.getElementById('contextSelect').value;
+            document.getElementById('kpiLabelCompliance').innerText = `Overall ${currentTimelineMode} Compliance`;
+            document.getElementById('chartTitleVolume').innerText = `Total PMs Done by Region (${currentTimelineMode})`;
+            document.getElementById('chartTitlePerformance').innerText = `PM Compliance Rate by Region (% - ${currentTimelineMode})`;
             
-            const filteredSet = fullDatabaseRecords.filter(row => {
-                if(row.week === undefined || row.week === null || row.week === "") return false;
-                const normalizedWeek = parseInt(String(row.week).replace(/\D/g, ""), 10);
-                return normalizedWeek === activeWeek;
-            });
+            let trendTitle = "Weekly Compliance Trend (Last 4 Weeks)";
+            if (currentTimelineMode === 'MONTH') trendTitle = "Historical Monthly Trend Analytics";
+            if (currentTimelineMode === 'YTD') trendTitle = "Progressive YTD Accumulation Steps";
+            document.getElementById('chartTitleTrend').innerText = trendTitle;
 
             // Summary Calculations
             const globalDoneCount = filteredSet.filter(r => r.status && r.status.trim().toUpperCase() === "DONE").length;
@@ -247,8 +355,8 @@
             
             document.getElementById('totalPms').innerText = `${globalPercentage}% (${globalDoneCount}/${globalTotalPlanned})`;
 
-            // GENERATE HISTORICAL TREND LINE CHART WITH VISIBLE LABELS
-            generateDetailedTrendChart(activeWeek);
+            // Generate Historical Trend Charts
+            generateContextualTrendChart(selectorVal);
 
             const discreteRegions = [...new Set(filteredSet.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
             const regionDoneCounts = {};
@@ -425,46 +533,31 @@
             renderTableRowsOnly();
         }
 
-        // UPGRADE 1 Core Processing Array: Evaluates and renders combined multidimensional array logic
+        // Global Table Processing Engine: Combines filters with timeframe settings
         function getActiveFilteredData() {
-            const selectorElement = document.getElementById('weekSelect');
-            if(!selectorElement || !selectorElement.value || selectorElement.value === "No Data Found") return [];
-            
-            const activeWeek = parseInt(selectorElement.value, 10);
-            
-            // 1. Dropdown Target Week Dimension
-            let results = fullDatabaseRecords.filter(row => {
-                if(row.week === undefined || row.week === null || row.week === "") return false;
-                return parseInt(String(row.week).replace(/\D/g, ""), 10) === activeWeek;
-            });
+            let results = getTimelineBaseDataset();
 
-            // 2. Clicked Chart Region Dimension
+            // Apply Cross-Filtering
             if (selectedRegionFilter !== null) {
                 results = results.filter(row => row.region && row.region.trim() === selectedRegionFilter);
             }
 
-            // 3. Quick Status Switch Tab Dimension
+            // Apply Status Tab Filtering
             if (activeStatusTab === 'DONE') {
                 results = results.filter(row => row.status && row.status.trim().toUpperCase() === 'DONE');
             } else if (activeStatusTab === 'MISSED') {
                 results = results.filter(row => !row.status || row.status.trim().toUpperCase() !== 'DONE');
             }
 
-            // 4. Live Text Search Query Box Match Dimension
+            // Apply Text Search Box Query Filtering
             const searchQuery = document.getElementById('tableSearchInput').value.trim().toLowerCase();
             if (searchQuery !== '') {
                 results = results.filter(row => {
-                    const equip = String(row.equipment_no || '').toLowerCase();
-                    const pmType = String(row.pm_type || '').toLowerCase();
-                    const loc = String(row.location || '').toLowerCase();
-                    const rca = String(row.rca_on_non_compliance || '').toLowerCase();
-                    const reg = String(row.region || '').toLowerCase();
-                    
-                    return equip.includes(searchQuery) || 
-                           pmType.includes(searchQuery) || 
-                           loc.includes(searchQuery) || 
-                           rca.includes(searchQuery) ||
-                           reg.includes(searchQuery);
+                    return String(row.equipment_no || '').toLowerCase().includes(searchQuery) || 
+                           String(row.pm_type || '').toLowerCase().includes(searchQuery) || 
+                           String(row.location || '').toLowerCase().includes(searchQuery) || 
+                           String(row.rca_on_non_compliance || '').toLowerCase().includes(searchQuery) ||
+                           String(row.region || '').toLowerCase().includes(searchQuery);
                 });
             }
 
@@ -477,9 +570,7 @@
             tableBody.innerHTML = '';
             
             if (rowsToRender.length === 0) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="6" class="px-6 py-8 text-center text-sm text-slate-500 font-medium">No operational matching entries found for selected criteria.</td>`;
-                tableBody.appendChild(tr);
+                tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-sm text-slate-500 font-medium">No matching records match the chosen criteria.</td></tr>`;
                 return;
             }
 
@@ -487,9 +578,7 @@
                 const tr = document.createElement('tr');
                 tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm";
                 const isDone = row.status && row.status.trim().toUpperCase() === 'DONE';
-                
-                let rcaValue = row.rca_on_non_compliance || '';
-                const rcaDisplay = (rcaValue.trim() !== "" && rcaValue.trim() !== "-") ? rcaValue.trim() : "-";
+                const rcaDisplay = (row.rca_on_non_compliance && row.rca_on_non_compliance.trim() !== "" && row.rca_on_non_compliance.trim() !== "-") ? row.rca_on_non_compliance.trim() : "-";
                 
                 tr.innerHTML = `
                     <td class="px-6 py-1.5 font-bold text-white">${row.equipment_no || '-'}</td>
@@ -503,23 +592,16 @@
             });
         }
 
-        // UPGRADE 3 Data Export Engine: Converts active state arrays to formatted .csv attachments
         function exportTableToCSV() {
             const currentFilteredData = getActiveFilteredData();
             if (currentFilteredData.length === 0) {
-                alert("There are no visible matching records available to export.");
+                alert("No visible data rows found to export.");
                 return;
             }
 
-            const selectorElement = document.getElementById('weekSelect');
-            const targetWeekStr = selectorElement ? selectorElement.value : 'Data';
-
-            // Define CSV Headers mapping exactly to database structural keys
-            const headers = ["Equipment Type/No", "PM Type", "Location", "Region", "Status", "RCA on Non-Compliance", "Week Context"];
-            
-            // Build text payload layout block array
-            const csvRows = [];
-            csvRows.push(headers.join(',')); // Attach row header columns
+            const activeContextLabel = document.getElementById('contextSelect').value;
+            const headers = ["Equipment Type/No", "PM Type", "Location", "Region", "Status", "RCA on Non-Compliance", "Week Logged"];
+            const csvRows = [headers.join(',')];
 
             currentFilteredData.forEach(item => {
                 const values = [
@@ -531,70 +613,77 @@
                     item.rca_on_non_compliance || '-',
                     item.week || '-'
                 ];
-
-                // Escape quotes and wrap items to block punctuation breakage inside cells
                 const cleanEscapedRow = values.map(val => {
-                    let textString = String(val).replace(/"/g, '""'); // Escape standard quote marks
-                    if (textString.includes(',') || textString.includes('\n') || textString.includes('"')) {
-                        textString = `"${textString}"`;
-                    }
-                    return textString;
+                    let txt = String(val).replace(/"/g, '""');
+                    if (txt.includes(',') || txt.includes('\n') || txt.includes('"')) txt = `"${txt}"`;
+                    return txt;
                 });
-
                 csvRows.push(cleanEscapedRow.join(','));
             });
 
-            // Convert string block into data blob attachment pipeline
-            const csvContentString = "\uFEFF" + csvRows.join('\n'); // Add UTF-8 BOM to keep characters clean in Excel
+            const csvContentString = "\uFEFF" + csvRows.join('\n');
             const blobBlobObj = new Blob([csvContentString], { type: 'text/csv;charset=utf-8;' });
-            
             const linkElement = document.createElement("a");
-            const objectURL = URL.createObjectURL(blobBlobObj);
             
-            // Calculate dynamic file descriptor naming properties
-            let regionalFileSuffix = selectedRegionFilter ? `_${selectedRegionFilter.replace(/\s+/g, '_')}` : '';
-            let statusSuffix = `_${activeStatusTab.toLowerCase()}`;
-            
-            linkElement.setAttribute("href", objectURL);
-            linkElement.setAttribute("download", `PM_Compliance_Week_${targetWeekStr}${regionalFileSuffix}${statusSuffix}_Report.csv`);
-            
+            linkElement.setAttribute("href", URL.createObjectURL(blobBlobObj));
+            linkElement.setAttribute("download", `PM_Report_${currentTimelineMode}_${activeContextLabel.replace(/\s+/g, '_')}.csv`);
             document.body.appendChild(linkElement);
-            linkElement.click(); // Programmatic dispatch trigger click
+            linkElement.click();
             document.body.removeChild(linkElement);
         }
 
-        // Generate Detailed Trend Chart
-        function generateDetailedTrendChart(currentSelectedWeek) {
-            const currentIdx = uniqueWeeksChronological.indexOf(currentSelectedWeek);
-            if (currentIdx === -1) return;
+        // Contextual Trend Line Chart Generator Engine
+        function generateContextualTrendChart(dropdownSelection) {
+            let labels = [];
+            let datasetValues = [];
 
-            const startIdx = Math.max(0, currentIdx - 3);
-            const lookbackWeeks = uniqueWeeksChronological.slice(startIdx, currentIdx + 1);
-
-            const trendLabels = [];
-            const trendData = [];
-
-            lookbackWeeks.forEach(wk => {
-                const weekDataset = fullDatabaseRecords.filter(row => {
-                    if(!row.week) return false;
-                    return parseInt(String(row.week).replace(/\D/g, ""), 10) === wk;
-                });
-                const doneCount = weekDataset.filter(r => r.status && r.status.trim().toUpperCase() === "DONE").length;
-                const totalCount = weekDataset.length;
-                const rate = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+            if (currentTimelineMode === 'WEEK' || currentTimelineMode === 'YTD') {
+                // Return dynamic moving average for weeks
+                const currentWeekInt = currentTimelineMode === 'WEEK' ? parseInt(dropdownSelection, 10) : parseInt(dropdownSelection, 10);
+                const currentIdx = uniqueWeeksChronological.indexOf(currentWeekInt);
                 
-                trendLabels.push(`Week ${wk}`);
-                trendData.push(rate);
-            });
+                if (currentIdx !== -1) {
+                    const startIdx = Math.max(0, currentIdx - 3);
+                    const lookbackWeeks = uniqueWeeksChronological.slice(startIdx, currentIdx + 1);
+
+                    lookbackWeeks.forEach(wk => {
+                        const weekDataset = fullDatabaseRecords.filter(row => {
+                            if(!row.week) return false;
+                            return parseInt(String(row.week).replace(/\D/g, ""), 10) === wk;
+                        });
+                        const done = weekDataset.filter(r => r.status && r.status.trim().toUpperCase() === "DONE").length;
+                        const rate = weekDataset.length > 0 ? Math.round((done / weekDataset.length) * 100) : 0;
+                        labels.push(`Week ${wk}`);
+                        datasetValues.push(rate);
+                    });
+                }
+            } 
+            else if (currentTimelineMode === 'MONTH') {
+                // Render trend performance comparison for all operational months
+                monthlyBoundariesMap.forEach(monthObj => {
+                    const monthDataset = fullDatabaseRecords.filter(row => {
+                        if (!row.week) return false;
+                        const normalizedWeek = parseInt(String(row.week).replace(/\D/g, ""), 10);
+                        return monthObj.weeks.includes(normalizedWeek);
+                    });
+                    
+                    if (monthDataset.length > 0) {
+                        const done = monthDataset.filter(r => r.status && r.status.trim().toUpperCase() === "DONE").length;
+                        const rate = Math.round((done / monthDataset.length) * 100);
+                        labels.push(monthObj.name);
+                        datasetValues.push(rate);
+                    }
+                });
+            }
 
             if (trendChartContext) trendChartContext.destroy();
             trendChartContext = new Chart(document.getElementById('trendChart'), {
                 type: 'line',
                 data: {
-                    labels: trendLabels,
+                    labels: labels,
                     datasets: [{
-                        label: 'Overall Compliance',
-                        data: trendData,
+                        label: 'Compliance Rate',
+                        data: datasetValues,
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         borderWidth: 3,
@@ -620,19 +709,8 @@
                         }
                     },
                     scales: {
-                        y: { 
-                            beginAtZero: true, 
-                            max: 115, 
-                            grid: { color: '#334155' }, 
-                            ticks: { 
-                                color: '#94a3b8',
-                                callback: function(value) { if (value <= 100) return value + '%'; }
-                            } 
-                        },
-                        x: { 
-                            grid: { color: '#334155' }, 
-                            ticks: { color: '#94a3b8', font: { size: 10 } } 
-                        }
+                        y: { beginAtZero: true, max: 115, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { if (value <= 100) return value + '%'; } } },
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 10 } } }
                     }
                 }
             });
