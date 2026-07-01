@@ -8,121 +8,125 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased text-xs">
 
-    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-8 py-4 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 sticky top-0 z-50">
+    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-5 py-2 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-2 sticky top-0 z-50">
         <div>
-            <h1 class="text-3xl font-bold tracking-tight text-white">PM Compliance Dashboard</h1>
-            <p class="text-xs text-slate-400 tracking-wider">OMEGA ASIA EQUIPMENT CORPORATION</p>
+            <h1 class="text-xl font-bold tracking-tight text-white">PM Compliance Dashboard</h1>
+            <p class="text-[10px] text-slate-400 tracking-wider">OMEGA ASIA EQUIPMENT CORPORATION</p>
         </div>
         
-        <div class="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto self-stretch sm:self-auto">
-            <div class="flex bg-slate-950/50 p-1 rounded-xl border border-slate-700 text-xs font-semibold w-full sm:w-auto justify-between sm:justify-start">
-                <button id="timeframeWEEK" onclick="switchTimeframeMode('WEEK')" class="px-4 py-2 rounded-lg transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center">Weekly</button>
-                <button id="timeframeMONTH" onclick="switchTimeframeMode('MONTH')" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">Monthly</button>
-                <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')" class="px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">YTD</button>
+        <div class="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto self-stretch sm:self-auto">
+            <div class="flex bg-slate-950/50 p-0.5 rounded-lg border border-slate-700 text-[11px] font-semibold w-full sm:w-auto justify-between sm:justify-start">
+                <button id="timeframeWEEK" onclick="switchTimeframeMode('WEEK')" class="px-3 py-1 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center">Weekly</button>
+                <button id="timeframeMONTH" onclick="switchTimeframeMode('MONTH')" class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">Monthly</button>
+                <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')" class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">YTD</button>
             </div>
 
-            <div class="flex items-center space-x-3 bg-slate-900/60 p-2 rounded-xl border border-slate-700 w-full sm:w-auto">
-                <label id="selectorLabel" for="contextSelect" class="text-xs font-semibold uppercase tracking-wider text-slate-400 pl-2 whitespace-nowrap">Select Target Week:</label>
-                <select id="contextSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none cursor-pointer min-w-[140px] w-full sm:w-auto">
+            <div class="flex items-center space-x-2 bg-slate-900/60 p-1 rounded-lg border border-slate-700 w-full sm:w-auto">
+                <label id="selectorLabel" for="contextSelect" class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 pl-1 whitespace-nowrap">Select Target Week:</label>
+                <select id="contextSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-md px-2 py-1 text-xs font-medium focus:outline-none cursor-pointer w-full sm:w-auto">
                 </select>
             </div>
         </div>
     </header>
 
     <div id="loadingOverlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex flex-col items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p class="text-slate-400 font-medium tracking-wide">Syncing Workspace Records...</p>
+        <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mb-3"></div>
+        <p class="text-slate-400 text-xs font-medium tracking-wide">Syncing Workspace Records...</p>
     </div>
 
-    <main class="p-6 max-w-7xl mx-auto space-y-6 hidden" id="dashboardMain">
+    <main class="p-4 max-w-7xl mx-auto space-y-4 hidden" id="dashboardMain">
 
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Highest Completed Region</p>
-                <h3 id="highestRegion" class="text-1xl font-bold text-emerald-400 mt-1">Calculating...</h3>
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 shadow">
+                <p class="text-[10px] font-medium uppercase tracking-wider text-slate-400">Highest Completed Region</p>
+                <h3 id="highestRegion" class="text-sm font-bold text-emerald-400 mt-0.5">Calculating...</h3>
             </div>
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-                <p class="text-xs font-medium uppercase tracking-wider text-slate-400">Lowest Completed Region</p>
-                <h3 id="lowestRegion" class="text-1xl font-bold text-rose-400 mt-1">Calculating...</h3>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 shadow">
+                <p class="text-[10px] font-medium uppercase tracking-wider text-slate-400">Lowest Completed Region</p>
+                <h3 id="lowestRegion" class="text-sm font-bold text-rose-400 mt-0.5">Calculating...</h3>
             </div>
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-                <p id="kpiLabelCompliance" class="text-xs font-medium uppercase tracking-wider text-slate-400">Overall Week Compliance</p>
-                <h3 id="totalPms" class="text-1xl font-bold text-blue-400 mt-1">0%</h3>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 shadow">
+                <p class="text-[10px] font-medium uppercase tracking-wider text-slate-400">Avg Scheduled PMs / Week</p>
+                <h3 id="avgScheduled" class="text-sm font-bold text-amber-400 mt-0.5">0</h3>
+            </div>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 shadow">
+                <p id="kpiLabelCompliance" class="text-[10px] font-medium uppercase tracking-wider text-slate-400">Overall Week Compliance</p>
+                <h3 id="totalPms" class="text-sm font-bold text-blue-400 mt-0.5">0%</h3>
             </div>
         </section>
 
-        <section class="grid grid-cols-1 lg:grid-cols-6 gap-6">
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 id="chartTitleVolume" class="text-md font-semibold text-white">Total PMs Done by Region (Count)</h3>
-                    <span id="filterBadge" class="text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded hidden">Click bar to isolate</span>
+        <section class="grid grid-cols-1 lg:grid-cols-6 gap-4">
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 lg:col-span-3 shadow">
+                <div class="flex justify-between items-center mb-1">
+                    <h3 id="chartTitleVolume" class="text-xs font-semibold text-white">Total PMs Done by Region (Count)</h3>
+                    <span id="filterBadge" class="text-[9px] font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.2 rounded hidden">Click bar to isolate</span>
                 </div>
-                <div class="h-64 relative"><canvas id="regionChart"></canvas></div>
+                <div class="h-48 relative"><canvas id="regionChart"></canvas></div>
             </div>
             
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <h3 id="chartTitlePerformance" class="text-md font-semibold text-white mb-2">PM Compliance Rate by Region (%)</h3>
-                <div class="h-64 relative"><canvas id="complianceRateChart"></canvas></div>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 lg:col-span-3 shadow">
+                <h3 id="chartTitlePerformance" class="text-xs font-semibold text-white mb-1">PM Compliance Rate by Region (%)</h3>
+                <div class="h-48 relative"><canvas id="complianceRateChart"></canvas></div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <h3 class="text-md font-semibold text-white mb-2">Non-Compliance Root Causes (RCA)</h3>
-                <div class="h-64 relative"><canvas id="rcaChart"></canvas></div>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 lg:col-span-3 shadow">
+                <h3 class="text-xs font-semibold text-white mb-1">Non-Compliance Root Causes (RCA)</h3>
+                <div class="h-48 relative"><canvas id="rcaChart"></canvas></div>
             </div>
 
-            <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 lg:col-span-3 shadow-lg">
-                <h3 id="chartTitleTrend" class="text-md font-semibold text-white mb-2">Weekly Compliance Trend (Last 4 Weeks)</h3>
-                <div class="h-64 relative"><canvas id="trendChart"></canvas></div>
+            <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 lg:col-span-3 shadow">
+                <h3 id="chartTitleTrend" class="text-xs font-semibold text-white mb-1">Weekly Compliance Trend (Last 4 Weeks)</h3>
+                <div class="h-48 relative"><canvas id="trendChart"></canvas></div>
             </div>
         </section>
 
-        <section class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden shadow-lg">
-            <div class="px-6 py-4 border-b border-slate-700 bg-slate-800/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div class="flex flex-wrap items-center gap-3">
-                    <h3 class="text-md font-semibold text-white">Equipment PM Tracking Log</h3>
-                    <div id="activeFilterIndicator" class="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg hidden flex items-center gap-2">
+        <section class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden shadow">
+            <div class="px-4 py-2 border-b border-slate-700 bg-slate-800/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="text-xs font-semibold text-white">Equipment PM Tracking Log</h3>
+                    <div id="activeFilterIndicator" class="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md hidden flex items-center gap-1.5">
                         <span>Region: <strong id="filteredRegionName"></strong></span>
                         <button onclick="clearActiveRegionFilter()" class="underline hover:text-white font-bold cursor-pointer">Clear</button>
                     </div>
                 </div>
                 
-                <button onclick="exportTableToCSV()" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition active:scale-95 cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                <button onclick="exportTableToCSV()" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 text-[11px] font-semibold px-2.5 py-1 rounded-md flex items-center gap-1 transition active:scale-95 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3A h-3A">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
                     Export Filtered Log (.CSV)
                 </button>
             </div>
 
-            <div class="p-4 bg-slate-900/30 border-b border-slate-700/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-                <div class="flex bg-slate-950/50 p-1 rounded-lg border border-slate-700 text-xs font-medium max-w-max">
-                    <button id="tabAll" onclick="setTableStatusTab('ALL')" class="px-3 py-1.5 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-semibold shadow">All PMs</button>
-                    <button id="tabDone" onclick="setTableStatusTab('DONE')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Completed Only</button>
-                    <button id="tabMissed" onclick="setTableStatusTab('MISSED')" class="px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Missed / Pending</button>
+            <div class="p-2.5 bg-slate-900/30 border-b border-slate-700/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                <div class="flex bg-slate-950/50 p-0.5 rounded border border-slate-700 text-[11px] font-medium max-w-max">
+                    <button id="tabAll" onclick="setTableStatusTab('ALL')" class="px-2.5 py-1 rounded transition-all cursor-pointer bg-blue-500 text-white font-semibold shadow">All PMs</button>
+                    <button id="tabDone" onclick="setTableStatusTab('DONE')" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Completed Only</button>
+                    <button id="tabMissed" onclick="setTableStatusTab('MISSED')" class="px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition-all cursor-pointer">Missed / Pending</button>
                 </div>
                 
-                <div class="relative flex-1 max-w-sm">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                <div class="relative flex-1 max-w-xs">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
                         </svg>
                     </span>
-                    <input type="text" id="tableSearchInput" oninput="renderTableRowsOnly()" placeholder="Search equipment, type, or location..." class="w-full bg-slate-950/60 text-slate-200 text-xs border border-slate-700 rounded-lg pl-9 pr-4 py-2 focus:outline-none focus:border-blue-500 placeholder-slate-500 transition-all">
+                    <input type="text" id="tableSearchInput" oninput="renderTableRowsOnly()" placeholder="Search logs..." class="w-full bg-slate-950/60 text-slate-200 text-xs border border-slate-700 rounded pl-8 pr-3 py-1 focus:outline-none focus:border-blue-500 placeholder-slate-500 transition-all">
                 </div>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm text-slate-300">
-                    <thead class="bg-slate-900/40 text-xs uppercase text-slate-400 border-b border-slate-700">
+                <table class="w-full text-left text-xs text-slate-300">
+                    <thead class="bg-slate-900/40 uppercase text-slate-400 border-b border-slate-700 text-[10px] tracking-wider">
                         <tr>
-                            <th class="px-6 py-2.5">Equipment No</th>
-                            <th class="px-6 py-2.5">PM Type</th>
-                            <th class="px-6 py-2.5">Location</th>
-                            <th class="px-6 py-2.5">Region</th>
-                            <th class="px-6 py-2.5">Status</th>
-                            <th class="px-6 py-2.5">RCA on Non-Compliance</th>
+                            <th class="px-4 py-1.5">Equipment No</th>
+                            <th class="px-4 py-1.5">PM Type</th>
+                            <th class="px-4 py-1.5">Location</th>
+                            <th class="px-4 py-1.5">Region</th>
+                            <th class="px-4 py-1.5">Status</th>
+                            <th class="px-4 py-1.5">RCA on Non-Compliance</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="divide-y divide-slate-700/50"></tbody>
@@ -132,10 +136,8 @@
     </main>
 
     <script>
-        // REGISTER THE DATALABELS PLUGIN GLOBALLY TO CHART.JS ENGINE
         Chart.register(ChartDataLabels);
 
-        // LIVE DEPLOYED GOOGLE APPS SCRIPT WEB SERVICE HANDLER URL ENDPOINT
         const API_URL = "https://script.google.com/macros/s/AKfycbzanFzLTeJQKaG7uPXTA12BNKaxiqJ7UfJ3sqQv02JYRo2BW1w63UDT1erCi6iDo3hlUQ/exec";
 
         let fullDatabaseRecords = [];
@@ -150,7 +152,6 @@
         let activeStatusTab = 'ALL'; 
         let currentTimelineMode = 'WEEK'; 
         
-        // Chronological Calendar Standard Multi-Week Boundary Association Array map
         const monthlyBoundariesMap = [
             { name: "January", weeks: [1, 2, 3, 4] },
             { name: "February", weeks: [5, 6, 7, 8] },
@@ -166,7 +167,6 @@
             { name: "December", weeks: [48, 49, 50, 51, 52] }
         ];
 
-        // Fetch external Cloud database contents 
         async function fetchLiveSheetData() {
             try {
                 const response = await fetch(API_URL);
@@ -191,7 +191,6 @@
             }
         }
 
-        // Handle structural reconfiguration of timeline frames
         function switchTimeframeMode(targetMode) {
             if (currentTimelineMode === targetMode) return;
             currentTimelineMode = targetMode;
@@ -199,9 +198,9 @@
             ['WEEK', 'MONTH', 'YTD'].forEach(mode => {
                 const el = document.getElementById(`timeframe${mode}`);
                 if (mode === targetMode) {
-                    el.className = "px-4 py-2 rounded-lg transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center";
+                    el.className = "px-3 py-1 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center";
                 } else {
-                    el.className = "px-4 py-2 rounded-lg text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center";
+                    el.className = "px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center";
                 }
             });
 
@@ -214,7 +213,6 @@
             resetRegionFilterAndRefresh();
         }
 
-        // Dynamically populates drop down choices depending on current timeline mode parameters
         function renderContextualDropdownOptions() {
             const selector = document.getElementById('contextSelect');
             selector.innerHTML = '';
@@ -276,18 +274,17 @@
             activeStatusTab = tabName;
             const tabs = ['tabAll', 'tabDone', 'tabMissed'];
             tabs.forEach(t => {
-                document.getElementById(t).className = "px-3 py-1.5 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer";
+                document.getElementById(t).className = "px-2.5 py-1 rounded text-slate-400 hover:text-slate-200 transition-all cursor-pointer";
             });
 
             let activeEl = document.getElementById('tabAll');
             if (tabName === 'DONE') activeEl = document.getElementById('tabDone');
             if (tabName === 'MISSED') activeEl = document.getElementById('tabMissed');
             
-            activeEl.className = "px-3 py-1.5 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-semibold shadow";
+            activeEl.className = "px-2.5 py-1 rounded transition-all cursor-pointer bg-blue-500 text-white font-semibold shadow";
             renderTableRowsOnly();
         }
 
-        // Resolves targeted partition dataset arrays matching active selection boundaries
         function getTimelineBaseDataset() {
             const selectorElement = document.getElementById('contextSelect');
             if (!selectorElement || !selectorElement.value) return [];
@@ -321,7 +318,41 @@
             return [];
         }
 
-        // Core Rendering Flow for Key Charts and KPIs
+        // New Logic to calculate Average Scheduled Tasks per unique logged week
+        function calculateAverageWeeklyScheduled() {
+            if (!uniqueWeeksChronological.length || !fullDatabaseRecords.length) return 0;
+            
+            const selectorElement = document.getElementById('contextSelect');
+            if (!selectorElement || !selectorElement.value) return 0;
+            
+            let relevantWeeks = [];
+            const dropdownVal = selectorElement.value;
+            
+            if (currentTimelineMode === 'WEEK') {
+                const targetWeek = parseInt(dropdownVal, 10);
+                const currentIdx = uniqueWeeksChronological.indexOf(targetWeek);
+                relevantWeeks = uniqueWeeksChronological.slice(0, currentIdx + 1);
+            } else if (currentTimelineMode === 'MONTH') {
+                const targetMonthObj = monthlyBoundariesMap.find(m => m.name === dropdownVal);
+                if (!targetMonthObj) return 0;
+                const maxWeekInMonth = Math.max(...targetMonthObj.weeks);
+                relevantWeeks = uniqueWeeksChronological.filter(w => w <= maxWeekInMonth);
+            } else if (currentTimelineMode === 'YTD') {
+                const upToWeekBoundary = parseInt(dropdownVal, 10);
+                relevantWeeks = uniqueWeeksChronological.filter(w => w <= upToWeekBoundary);
+            }
+            
+            if (!relevantWeeks.length) return 0;
+            
+            const totalScheduledCount = fullDatabaseRecords.filter(row => {
+                if (!row.week) return false;
+                const normalizedWeek = parseInt(String(row.week).replace(/\D/g, ""), 10);
+                return relevantWeeks.includes(normalizedWeek);
+            }).length;
+            
+            return Math.round(totalScheduledCount / relevantWeeks.length);
+        }
+
         function updateDashboardVisuals() {
             const filteredSet = getTimelineBaseDataset();
             const selectorVal = document.getElementById('contextSelect').value;
@@ -340,6 +371,9 @@
             const globalPercentage = globalTotalPlanned > 0 ? Math.round((globalDoneCount / globalTotalPlanned) * 100) : 0;
             
             document.getElementById('totalPms').innerText = `${globalPercentage}% (${globalDoneCount}/${globalTotalPlanned})`;
+            
+            // Render Dynamic Avg Scheduled KPI Indicator Card
+            document.getElementById('avgScheduled').innerText = calculateAverageWeeklyScheduled();
 
             generateContextualTrendChart(selectorVal);
 
@@ -387,14 +421,6 @@
             document.getElementById('highestRegion').innerText = maxCount > 0 ? `${highestReg} (${maxCount} Done)` : '0 Done Found';
             document.getElementById('lowestRegion').innerText = filteredSet.length > 0 ? `${lowestReg} (${minCount === 999999 ? 0 : minCount} Done)` : '0 Done Found';
 
-            // Distinctive highlight colors for highest and lowest performant parameters
-            const barColors = regionLabels.map(label => {
-                if (maxCount === 0) return '#3b82f6';
-                if (label === lowestReg && maxCount !== minCount) return '#f43f5e';
-                if (label === highestReg && maxCount !== minCount) return '#10b981';
-                return '#3b82f6';  
-            });
-
             const chartClickHandler = function(event, activeElements, chartInstance) {
                 if (activeElements && activeElements.length > 0) {
                     const dataIndex = activeElements[0].index;
@@ -412,13 +438,13 @@
                 }
             };
 
-            // CHART 1: REGION COMPLETED VOLUMES BAR
+            // CHART 1: REGION COMPLETED VOLUMES BAR (Kept Your Custom '#73c2fb' background fill color)
             if (regionChartContext) regionChartContext.destroy();
             regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ label: 'Total PMs Done', data: regionDoneValues, backgroundColor: '#73c2fb', borderRadius: 6, barThickness: 45 }]
+                    datasets: [{ label: 'Total PMs Done', data: regionDoneValues, backgroundColor: '#73c2fb', borderRadius: 4, barThickness: 30 }]
                 },
                 options: {
                     responsive: true,
@@ -431,8 +457,8 @@
                             align: 'top',
                             anchor: 'end',
                             color: '#ffffff',
-                            offset: 2,
-                            font: { weight: 'bold', size: 11 },
+                            offset: 1,
+                            font: { weight: 'bold', size: 10 },
                             formatter: function(value) { return value > 0 ? value : ''; }
                         }
                     },
@@ -443,13 +469,13 @@
                 }
             });
 
-            // CHART 2: REGION COMPLIANCE PERFORMANCE RATE PERCENTAGE
+            // CHART 2: REGION COMPLIANCE PERFORMANCE RATE PERCENTAGE (Kept Your Custom '#73c2fb' background fill color)
             if (complianceChartContext) complianceChartContext.destroy();
             complianceChartContext = new Chart(document.getElementById('complianceRateChart'), {
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ label: 'Compliance Rate (%)', data: regionRatePercentages, backgroundColor: '#73c2fb', borderRadius: 6, barThickness: 45 }]
+                    datasets: [{ label: 'Compliance Rate (%)', data: regionRatePercentages, backgroundColor: '#73c2fb', borderRadius: 4, barThickness: 30 }]
                 },
                 options: {
                     responsive: true,
@@ -462,8 +488,8 @@
                             align: 'top',
                             anchor: 'end',
                             color: '#ffffff',
-                            offset: 2,
-                            font: { weight: 'bold', size: 10 },
+                            offset: 1,
+                            font: { weight: 'bold', size: 9 },
                             formatter: function(value) { return value + '%'; }
                         }
                     },
@@ -474,7 +500,7 @@
                 }
             });
 
-            // CHART 3: RCA THICKENED DOUGHNUT (Balanced ring width cutout ratio config)
+            // CHART 3: RCA DOUGHNUT (Kept Your Custom Color Hex Matrix Array & Cutout thickness configuration)
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
@@ -507,25 +533,23 @@
                     plugins: {  
                         legend: { 
                             position: 'right', 
-                            labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } } 
+                            labels: { color: '#94a3b8', boxWidth: 8, font: { size: 9 } } 
                         },
                         datalabels: {
                             display: hasMissedPms,  
                             color: '#000000',
-                            font: { weight: 'bold', size: 11 },
-                            textShadowColor: 'rgba(0, 0, 0, 0.8)',
+                            font: { weight: 'bold', size: 10 },
                             textShadowBlur: 0,
                             formatter: function(value) { return value; }
                         }
                     },  
-                    cutout: '55%' // Enhanced ring layout thickness adjustment (Changed from '50%')
+                    cutout: '55%'
                 }
             });
 
             renderTableRowsOnly();
         }
 
-        // Resolves nested filters intersection state matrices
         function getActiveFilteredData() {
             let results = getTimelineBaseDataset();
 
@@ -553,36 +577,34 @@
             return results;
         }
 
-        // Populates tabular equipment rows tracking indexes
         function renderTableRowsOnly() {
             const rowsToRender = getActiveFilteredData();
             const tableBody = document.getElementById('tableBody');
             tableBody.innerHTML = '';
             
             if (rowsToRender.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-sm text-slate-500 font-medium">No records match the chosen filter parameters.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="6" class="px-4 py-4 text-center text-xs text-slate-500 font-medium">No records match the chosen filter parameters.</td></tr>`;
                 return;
             }
 
             rowsToRender.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs sm:text-sm transition-colors";
+                tr.className = "border-b border-slate-700/60 hover:bg-slate-700/20 text-xs transition-colors";
                 const isDone = row.status && row.status.trim().toUpperCase() === 'DONE';
                 const rcaDisplay = (row.rca_on_non_compliance && row.rca_on_non_compliance.trim() !== "" && row.rca_on_non_compliance.trim() !== "-") ? row.rca_on_non_compliance.trim() : "-";
                 
                 tr.innerHTML = `
-                    <td class="px-6 py-2 font-bold text-white tracking-wide">${row.equipment_no || '-'}</td>
-                    <td class="px-6 py-2">${row.pm_type || '-'}</td>
-                    <td class="px-6 py-2 text-slate-300">${row.location || '-'}</td>
-                    <td class="px-6 py-2 text-slate-400">${row.region || '-'}</td>
-                    <td class="px-6 py-2"><span class="px-2 py-0.5 rounded text-xs font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
-                    <td class="px-6 py-2 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
+                    <td class="px-4 py-1 font-bold text-white tracking-wide">${row.equipment_no || '-'}</td>
+                    <td class="px-4 py-1">${row.pm_type || '-'}</td>
+                    <td class="px-4 py-1 text-slate-300">${row.location || '-'}</td>
+                    <td class="px-4 py-1 text-slate-400">${row.region || '-'}</td>
+                    <td class="px-4 py-1"><span class="px-2 py-0.2 rounded text-[10px] font-semibold ${isDone ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20':'bg-rose-500/10 text-rose-400 border border-rose-500/20'}">${row.status || 'Pending'}</span></td>
+                    <td class="px-4 py-1 ${isDone ? 'text-slate-500': 'text-amber-400 font-medium'}">${rcaDisplay}</td>
                 `;
                 tableBody.appendChild(tr);
             });
         }
 
-        // Raw CSV Exporter and Spreadsheet Downloader Utility Function
         function exportTableToCSV() {
             const currentFilteredData = getActiveFilteredData();
             if (currentFilteredData.length === 0) {
@@ -623,7 +645,7 @@
             document.body.removeChild(linkElement);
         }
 
-        // CHART 4: CONTEXTUAL LOOKBACK HISTORICAL COMPLIANCE TIMELINE LINE CHART
+        // CHART 4: CONTEXTUAL LOOKBACK LINE CHART (Kept Your Custom 'rgba(59, 130, 246, 0.08)' fill accent background)
         function generateContextualTrendChart(dropdownSelection) {
             let labels = [];
             let datasetValues = [];
@@ -665,7 +687,6 @@
                 });
             }
 
-            // Create a matching array of 95s to align with our dynamic labels length
             const targetValuesArray = new Array(labels.length).fill(95);
 
             if (trendChartContext) trendChartContext.destroy();
@@ -679,10 +700,10 @@
                             data: datasetValues,
                             borderColor: '#3b82f6',
                             backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                            borderWidth: 3,
+                            borderWidth: 2,
                             pointRadius: (context) => {
                                 const lastIdx = context.dataset.data.length - 1;
-                                return context.dataIndex === lastIdx ? 7 : 4;
+                                return context.dataIndex === lastIdx ? 5 : 3;
                             },
                             pointBackgroundColor: (context) => {
                                 const lastIdx = context.dataset.data.length - 1;
@@ -695,11 +716,11 @@
                         {
                             label: 'Weekly Target (95%)',
                             data: targetValuesArray,
-                            borderColor: '#f43f5e', // Solid rose color boundary accent line
-                            borderWidth: 2,
-                            borderDash: [6, 4],     // Beautifully dashed layout
-                            pointRadius: 0,         // Clean, un-dotted path
-                            pointHitRadius: 0,      // No tooltip interference
+                            borderColor: '#f43f5e', 
+                            borderWidth: 1.5,
+                            borderDash: [5, 4],     
+                            pointRadius: 0,         
+                            pointHitRadius: 0,      
                             fill: false,
                             z: 1
                         }
@@ -712,28 +733,21 @@
                         legend: { 
                             display: true,
                             position: 'top',
-                            labels: {
-                                color: '#94a3b8',
-                                boxWidth: 12,
-                                font: { size: 10 }
-                            }
+                            labels: { color: '#94a3b8', boxWidth: 10, font: { size: 9 } }
                         },
                         datalabels: { 
-                            // Only print numbers for the actual Compliance dataset, leave target clean
-                            display: function(context) {
-                                return context.datasetIndex === 0;
-                            },
+                            display: function(context) { return context.datasetIndex === 0; },
                             align: 'top',
                             anchor: 'center',
                             color: '#ffffff',
-                            font: { weight: 'bold', size: 10 },
-                            offset: 6,
+                            font: { weight: 'bold', size: 9 },
+                            offset: 4,
                             formatter: function(value) { return value + '%'; }
                         }
                     },
                     scales: {
                         y: { beginAtZero: true, max: 115, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { if (value <= 100) return value + '%'; } } },
-                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 9 } } }
                     }
                 }
             });
