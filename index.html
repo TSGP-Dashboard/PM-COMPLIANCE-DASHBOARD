@@ -23,10 +23,15 @@
                 <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')" class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">YTD</button>
             </div>
 
-            <div class="flex items-center space-x-2 bg-slate-900/60 p-1 rounded-lg border border-slate-700 w-full sm:w-auto">
-                <label id="selectorLabel" for="contextSelect" class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 pl-1 whitespace-nowrap">Select Target Week:</label>
-                <select id="contextSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-md px-2 py-1 text-xs font-medium focus:outline-none cursor-pointer w-full sm:w-auto">
-                </select>
+            <div class="flex items-center flex-wrap gap-2 bg-slate-900/60 p-1 rounded-lg border border-slate-700 w-full sm:w-auto">
+                <div class="flex items-center space-x-2">
+                    <label id="selectorLabel" for="contextSelect" class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 pl-1 whitespace-nowrap">Select Target Week:</label>
+                    <select id="contextSelect" onchange="resetRegionFilterAndRefresh()" class="bg-slate-800 text-white border border-slate-600 rounded-md px-2 py-1 text-xs font-medium focus:outline-none cursor-pointer w-full sm:w-auto">
+                    </select>
+                </div>
+                <div id="dateRangeDisplay" class="bg-slate-950/70 border border-slate-700 text-blue-400 font-mono font-bold text-[11px] px-2.5 py-1 rounded select-none shadow-inner hidden">
+                    ---
+                </div>
             </div>
         </div>
     </header>
@@ -93,7 +98,7 @@
                 </div>
                 
                 <button onclick="exportTableToCSV()" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 text-[11px] font-semibold px-2.5 py-1 rounded-md flex items-center gap-1 transition active:scale-95 cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3A h-3A">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
                     Export Filtered Log (.CSV)
@@ -166,6 +171,81 @@
             { name: "November", weeks: [44, 45, 46, 47] },
             { name: "December", weeks: [48, 49, 50, 51, 52] }
         ];
+
+        // Custom Operational Engine: Maps raw tracking integers to custom Saturday-to-Friday shifts
+        // Anchor Row Constraint: Week 25 = June 20, 2020 through June 26, 2020
+        function getCustomWeekDateBounds(weekNumber) {
+            const anchorWeek = 25;
+            const anchorStart = new Date(Date.UTC(2020, 5, 20)); // June 20, 2020 (Saturday)
+            
+            const weeksDifference = weekNumber - anchorWeek;
+            const daysOffset = weeksDifference * 7;
+            
+            const startDate = new Date(anchorStart.getTime());
+            startDate.setUTCDate(startDate.getUTCDate() + daysOffset);
+            
+            const endDate = new Date(startDate.getTime());
+            endDate.setUTCDate(endDate.getUTCDate() + 6); // End on Friday
+            
+            return { start: startDate, end: endDate };
+        }
+
+        // Formats the timestamp display output into the dashboard bar container
+        function updateDateRangeDisplayBadge() {
+            const displayBadge = document.getElementById('dateRangeDisplay');
+            const selectorElement = document.getElementById('contextSelect');
+            
+            if (!selectorElement || !selectorElement.value || uniqueWeeksChronological.length === 0) {
+                displayBadge.classList.add('hidden');
+                return;
+            }
+
+            const selectionValue = selectorElement.value;
+            const options = { month: 'short', day: '2-digit', timeZone: 'UTC' };
+
+            if (currentTimelineMode === 'WEEK') {
+                const targetWeek = parseInt(selectionValue, 10);
+                const bounds = getCustomWeekDateBounds(targetWeek);
+                
+                const startStr = bounds.start.toLocaleDateString('en-US', options);
+                const endStr = bounds.end.toLocaleDateString('en-US', options);
+                
+                displayBadge.innerText = `[Sat, ${startStr} - Fri, ${endStr}]`;
+                displayBadge.classList.remove('hidden');
+            } 
+            else if (currentTimelineMode === 'MONTH') {
+                const monthObj = monthlyBoundariesMap.find(m => m.name === selectionValue);
+                if (!monthObj) { displayBadge.classList.add('hidden'); return; }
+                
+                const validWeeks = monthObj.weeks.filter(w => uniqueWeeksChronological.includes(w));
+                if (validWeeks.length === 0) { displayBadge.classList.add('hidden'); return; }
+                
+                const minWeek = Math.min(...validWeeks);
+                const maxWeek = Math.max(...validWeeks);
+                
+                const startBounds = getCustomWeekDateBounds(minWeek);
+                const endBounds = getCustomWeekDateBounds(maxWeek);
+                
+                const startStr = startBounds.start.toLocaleDateString('en-US', options);
+                const endStr = endBounds.end.toLocaleDateString('en-US', options);
+                
+                displayBadge.innerText = `[${startStr} - ${endStr}]`;
+                displayBadge.classList.remove('hidden');
+            } 
+            else if (currentTimelineMode === 'YTD') {
+                const upToWeek = parseInt(selectionValue, 10);
+                const minWeek = Math.min(...uniqueWeeksChronological);
+                
+                const startBounds = getCustomWeekDateBounds(minWeek);
+                const endBounds = getCustomWeekDateBounds(upToWeek);
+                
+                const startStr = startBounds.start.toLocaleDateString('en-US', options);
+                const endStr = endBounds.end.toLocaleDateString('en-US', options);
+                
+                displayBadge.innerText = `[YTD: ${startStr} - ${endStr}]`;
+                displayBadge.classList.remove('hidden');
+            }
+        }
 
         async function fetchLiveSheetData() {
             try {
@@ -318,7 +398,6 @@
             return [];
         }
 
-        // New Logic to calculate Average Scheduled Tasks per unique logged week
         function calculateAverageWeeklyScheduled() {
             if (!uniqueWeeksChronological.length || !fullDatabaseRecords.length) return 0;
             
@@ -357,6 +436,9 @@
             const filteredSet = getTimelineBaseDataset();
             const selectorVal = document.getElementById('contextSelect').value;
             
+            // Execute Custom Calendar Output Intercept Loop
+            updateDateRangeDisplayBadge();
+
             document.getElementById('kpiLabelCompliance').innerText = `Overall ${currentTimelineMode} Compliance`;
             document.getElementById('chartTitleVolume').innerText = `Total PMs Done by Region (${currentTimelineMode})`;
             document.getElementById('chartTitlePerformance').innerText = `PM Compliance Rate by Region (% - ${currentTimelineMode})`;
@@ -371,8 +453,6 @@
             const globalPercentage = globalTotalPlanned > 0 ? Math.round((globalDoneCount / globalTotalPlanned) * 100) : 0;
             
             document.getElementById('totalPms').innerText = `${globalPercentage}% (${globalDoneCount}/${globalTotalPlanned})`;
-            
-            // Render Dynamic Avg Scheduled KPI Indicator Card
             document.getElementById('avgScheduled').innerText = calculateAverageWeeklyScheduled();
 
             generateContextualTrendChart(selectorVal);
@@ -438,7 +518,6 @@
                 }
             };
 
-            // CHART 1: REGION COMPLETED VOLUMES BAR (Kept Your Custom '#73c2fb' background fill color)
             if (regionChartContext) regionChartContext.destroy();
             regionChartContext = new Chart(document.getElementById('regionChart'), {
                 type: 'bar',
@@ -469,7 +548,6 @@
                 }
             });
 
-            // CHART 2: REGION COMPLIANCE PERFORMANCE RATE PERCENTAGE (Kept Your Custom '#73c2fb' background fill color)
             if (complianceChartContext) complianceChartContext.destroy();
             complianceChartContext = new Chart(document.getElementById('complianceRateChart'), {
                 type: 'bar',
@@ -500,7 +578,6 @@
                 }
             });
 
-            // CHART 3: RCA DOUGHNUT (Kept Your Custom Color Hex Matrix Array & Cutout thickness configuration)
             const rcaTallies = {};
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
@@ -645,7 +722,6 @@
             document.body.removeChild(linkElement);
         }
 
-        // CHART 4: CONTEXTUAL LOOKBACK LINE CHART (Kept Your Custom 'rgba(59, 130, 246, 0.08)' fill accent background)
         function generateContextualTrendChart(dropdownSelection) {
             let labels = [];
             let datasetValues = [];
