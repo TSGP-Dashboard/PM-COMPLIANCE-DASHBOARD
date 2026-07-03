@@ -97,12 +97,18 @@
                     </div>
                 </div>
                 
-                <button onclick="exportTableToCSV()" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 text-[11px] font-semibold px-2.5 py-1 rounded-md flex items-center gap-1 transition active:scale-95 cursor-pointer">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                    </svg>
-                    Export Filtered Log (.CSV)
-                </button>
+                <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                    <div id="tableUrgencyBadge" class="font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner hidden select-none">
+                        ---
+                    </div>
+
+                    <button onclick="exportTableToCSV()" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 text-[11px] font-semibold px-2.5 py-1 rounded-md flex items-center gap-1 transition active:scale-95 cursor-pointer whitespace-nowrap">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                        </svg>
+                        Export Filtered Log (.CSV)
+                    </button>
+                </div>
             </div>
 
             <div class="p-2.5 bg-slate-900/30 border-b border-slate-700/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
@@ -172,8 +178,6 @@
             { name: "December", weeks: [48, 49, 50, 51, 52] }
         ];
 
-        // Custom Operational Engine: Maps raw tracking integers to custom Saturday-to-Friday shifts
-        // Anchor Row Constraint: Week 25 = June 20, 2020 through June 26, 2020
         function getCustomWeekDateBounds(weekNumber) {
             const anchorWeek = 25;
             const anchorStart = new Date(Date.UTC(2020, 5, 20)); // June 20, 2020 (Saturday)
@@ -190,7 +194,50 @@
             return { start: startDate, end: endDate };
         }
 
-        // Formats the timestamp display output into the dashboard bar container
+        // Calculates remaining equipment backlog for the current selected week view
+        function updateTableUrgencyIndicator(currentSelectedWeek, baseDatasetRows) {
+            const badge = document.getElementById('tableUrgencyBadge');
+            
+            // Show countdown badge strictly during "Weekly" timeframe operations
+            if (currentTimelineMode !== 'WEEK') {
+                badge.classList.add('hidden');
+                return;
+            }
+
+            const totalRemainingCount = baseDatasetRows.filter(row => !row.status || row.status.trim().toUpperCase() !== 'DONE').length;
+            const now = new Date();
+            const weekBounds = getCustomWeekDateBounds(currentSelectedWeek);
+            
+            // Anchor closure boundary check to the Friday midnight ending mark
+            const closingFridayMidnight = new Date(weekBounds.end.getTime());
+            closingFridayMidnight.setHours(23, 59, 59, 999);
+
+            // Condition 1: Week falls in historical past context
+            if (now > closingFridayMidnight) {
+                badge.innerText = "✅ Historical Tasks Locked";
+                badge.className = "font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner bg-slate-950/40 text-slate-500 border-slate-700/60";
+            } 
+            // Condition 2: Ongoing dynamic active target week, fully accomplished
+            else if (totalRemainingCount === 0) {
+                badge.innerText = "🎉 100% Target Attained!";
+                badge.className = "font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner bg-emerald-950/30 text-emerald-400 border-emerald-500/30 font-bold";
+            } 
+            // Condition 3: Active workflow with active open backlogs remaining
+            else {
+                badge.innerText = `⏳ ${totalRemainingCount} PM Tasks Left (Closes Fri)`;
+                
+                // Emphasize pressure if system window reaches Thursday or Friday
+                const systemDayIdx = now.getDay(); // 4 = Thursday, 5 = Friday
+                if (systemDayIdx === 4 || systemDayIdx === 5) {
+                    badge.className = "font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner bg-rose-950/40 text-rose-400 border-rose-500/40 font-bold animate-pulse";
+                } else {
+                    badge.className = "font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner bg-amber-950/30 text-amber-400 border-amber-500/30 font-semibold";
+                }
+            }
+
+            badge.classList.remove('hidden');
+        }
+
         function updateDateRangeDisplayBadge() {
             const displayBadge = document.getElementById('dateRangeDisplay');
             const selectorElement = document.getElementById('contextSelect');
@@ -436,8 +483,10 @@
             const filteredSet = getTimelineBaseDataset();
             const selectorVal = document.getElementById('contextSelect').value;
             
-            // Execute Custom Calendar Output Intercept Loop
             updateDateRangeDisplayBadge();
+
+            // Run counter engine calculations for table task tracker pill
+            updateTableUrgencyIndicator(parseInt(selectorVal, 10), filteredSet);
 
             document.getElementById('kpiLabelCompliance').innerText = `Overall ${currentTimelineMode} Compliance`;
             document.getElementById('chartTitleVolume').innerText = `Total PMs Done by Region (${currentTimelineMode})`;
