@@ -98,8 +98,8 @@
                 </div>
                 
                 <div class="flex items-center gap-3 w-full md:w-auto justify-end">
-                    <div id="tableUrgencyBadge" class="font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner hidden select-none">
-                        ---
+                    <div id="tableUrgencyBadge" class="font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner select-none">
+                        ⏳ Calculating Tasks...
                     </div>
 
                     <button onclick="exportTableToCSV()" class="bg-slate-700 hover:bg-slate-600 border border-slate-600 text-slate-200 text-[11px] font-semibold px-2.5 py-1 rounded-md flex items-center gap-1 transition active:scale-95 cursor-pointer whitespace-nowrap">
@@ -194,11 +194,10 @@
             return { start: startDate, end: endDate };
         }
 
-        // Calculates remaining equipment backlog for the current selected week view
+        // Force calculations to run and make badge visible
         function updateTableUrgencyIndicator(currentSelectedWeek, baseDatasetRows) {
             const badge = document.getElementById('tableUrgencyBadge');
             
-            // Show countdown badge strictly during "Weekly" timeframe operations
             if (currentTimelineMode !== 'WEEK') {
                 badge.classList.add('hidden');
                 return;
@@ -208,26 +207,21 @@
             const now = new Date();
             const weekBounds = getCustomWeekDateBounds(currentSelectedWeek);
             
-            // Anchor closure boundary check to the Friday midnight ending mark
             const closingFridayMidnight = new Date(weekBounds.end.getTime());
             closingFridayMidnight.setHours(23, 59, 59, 999);
 
-            // Condition 1: Week falls in historical past context
             if (now > closingFridayMidnight) {
                 badge.innerText = "✅ Historical Tasks Locked";
                 badge.className = "font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner bg-slate-950/40 text-slate-500 border-slate-700/60";
             } 
-            // Condition 2: Ongoing dynamic active target week, fully accomplished
             else if (totalRemainingCount === 0) {
                 badge.innerText = "🎉 100% Target Attained!";
                 badge.className = "font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner bg-emerald-950/30 text-emerald-400 border-emerald-500/30 font-bold";
             } 
-            // Condition 3: Active workflow with active open backlogs remaining
             else {
                 badge.innerText = `⏳ ${totalRemainingCount} PM Tasks Left (Closes Fri)`;
                 
-                // Emphasize pressure if system window reaches Thursday or Friday
-                const systemDayIdx = now.getDay(); // 4 = Thursday, 5 = Friday
+                const systemDayIdx = now.getDay(); 
                 if (systemDayIdx === 4 || systemDayIdx === 5) {
                     badge.className = "font-mono text-[11px] px-2.5 py-1 rounded border shadow-inner bg-rose-950/40 text-rose-400 border-rose-500/40 font-bold animate-pulse";
                 } else {
@@ -485,7 +479,7 @@
             
             updateDateRangeDisplayBadge();
 
-            // Run counter engine calculations for table task tracker pill
+            // Run counter engine calculations for table task tracker pill explicitly
             updateTableUrgencyIndicator(parseInt(selectorVal, 10), filteredSet);
 
             document.getElementById('kpiLabelCompliance').innerText = `Overall ${currentTimelineMode} Compliance`;
