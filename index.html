@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased text-xs">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans antialiased text-xs pb-16">
 
     <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700 px-5 py-2 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-2 sticky top-0 z-50">
         <div>
@@ -18,9 +18,9 @@
         
         <div class="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto self-stretch sm:self-auto">
             <div class="flex bg-slate-950/50 p-0.5 rounded-lg border border-slate-700 text-[11px] font-semibold w-full sm:w-auto justify-between sm:justify-start">
-                <button id="timeframeWEEK" onclick="switchTimeframeMode('WEEK')" class="px-3 py-1 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center">Weekly</button>
-                <button id="timeframeMONTH" onclick="switchTimeframeMode('MONTH')" class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">Monthly</button>
-                <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')" class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">YTD</button>
+                <button id="timeframeWEEK" onclick="switchTimeframeMode('WEEK')", class="px-3 py-1 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center">Weekly</button>
+                <button id="timeframeMONTH" onclick="switchTimeframeMode('MONTH')", class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">Monthly</button>
+                <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')", class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">YTD</button>
             </div>
 
             <div class="flex items-center flex-wrap gap-2 bg-slate-900/60 p-1 rounded-lg border border-slate-700 w-full sm:w-auto">
@@ -40,6 +40,13 @@
         <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500 mb-3"></div>
         <p class="text-slate-400 text-xs font-medium tracking-wide">Syncing Workspace Records...</p>
     </div>
+
+    <button id="floatingSyncBtn" onclick="fetchLiveSheetData(true)" class="fixed bottom-4 right-4 bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-2 rounded-full font-semibold shadow-lg shadow-blue-950/50 border border-blue-400 flex items-center gap-1.5 transition active:scale-95 cursor-pointer z-40 group text-[11px]">
+        <svg id="syncIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-3.5 h-3.5 group-hover:rotate-180 transition-transform duration-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+        <span id="syncText">Sync Workspace</span>
+    </button>
 
     <main class="p-4 max-w-7xl mx-auto space-y-4 hidden" id="dashboardMain">
 
@@ -162,6 +169,7 @@
         
         let activeStatusTab = 'ALL'; 
         let currentTimelineMode = 'WEEK'; 
+        let isSyncing = false;
         
         const monthlyBoundariesMap = [
             { name: "January", weeks: [1, 2, 3, 4] },
@@ -287,11 +295,24 @@
             }
         }
 
-        async function fetchLiveSheetData() {
+        async function fetchLiveSheetData(isManualSync = false) {
+            if (isSyncing) return;
+            
+            if (isManualSync) {
+                isSyncing = true;
+                document.getElementById('syncIcon').classList.add('animate-spin');
+                document.getElementById('syncText').innerText = "Syncing...";
+                document.getElementById('floatingSyncBtn').classList.add('opacity-80', 'pointer-events-none');
+            } else {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+            }
+
             try {
                 const response = await fetch(API_URL);
                 fullDatabaseRecords = await response.json();
                 
+                const cachedDropdownValue = document.getElementById('contextSelect') ? document.getElementById('contextSelect').value : null;
+
                 uniqueWeeksChronological = [...new Set(fullDatabaseRecords.map(row => {
                     if (row.week === undefined || row.week === null || row.week === "") return null;
                     const match = String(row.week).replace(/\D/g, "");
@@ -304,10 +325,22 @@
                 document.getElementById('filterBadge').classList.remove('hidden');
                 
                 renderContextualDropdownOptions();
+                
+                if (cachedDropdownValue && document.getElementById('contextSelect').querySelector(`option[value="${cachedDropdownValue}"]`)) {
+                    document.getElementById('contextSelect').value = cachedDropdownValue;
+                }
+                
                 updateDashboardVisuals();
             } catch (error) {
                 console.error("Connection failed:", error);
                 alert("Could not connect to Apps Script database endpoint service loop.");
+            } finally {
+                if (isManualSync) {
+                    isSyncing = false;
+                    document.getElementById('syncIcon').classList.remove('animate-spin');
+                    document.getElementById('syncText').innerText = "Sync Workspace";
+                    document.getElementById('floatingSyncBtn').classList.remove('opacity-80', 'pointer-events-none');
+                }
             }
         }
 
@@ -387,6 +420,16 @@
         function clearActiveRegionFilter() {
             selectedRegionFilter = null;
             document.getElementById('activeFilterIndicator').classList.add('hidden');
+            
+            if (regionChartContext) {
+                regionChartContext.data.datasets.forEach(ds => ds.backgroundColor = ds.label === 'Planned' ? '#64748b' : '#48d1cc');
+                regionChartContext.update();
+            }
+            if (complianceChartContext) {
+                complianceChartContext.data.datasets[0].backgroundColor = '#73c2fb';
+                complianceChartContext.update();
+            }
+            
             renderTableRowsOnly(); 
         }
 
@@ -546,6 +589,7 @@
             document.getElementById('highestRegion').innerText = maxCount > 0 ? `${highestReg} (${maxCount} Done)` : '0 Done Found';
             document.getElementById('lowestRegion').innerText = filteredSet.length > 0 ? `${lowestReg} (${minCount === 999999 ? 0 : minCount} Done)` : '0 Done Found';
 
+            // Click interaction with visual selection highlighting
             const chartClickHandler = function(event, activeElements, chartInstance) {
                 if (activeElements && activeElements.length > 0) {
                     const dataIndex = activeElements[0].index;
@@ -559,6 +603,33 @@
                         document.getElementById('filteredRegionName').innerText = clickedRegion;
                         document.getElementById('activeFilterIndicator').classList.remove('hidden');
                     }
+                    
+                    // Apply dimming logic dynamically on all regions
+                    if (regionChartContext) {
+                        regionChartContext.data.datasets.forEach(ds => {
+                            const isPlanned = ds.label === 'Planned';
+                            const defaultColor = isPlanned ? '#64748b' : '#48d1cc';
+                            const dimmedColor = isPlanned ? 'rgba(100, 116, 139, 0.35)' : 'rgba(72, 209, 204, 0.35)';
+                            
+                            ds.backgroundColor = regionChartContext.data.labels.map(lbl => {
+                                if (!selectedRegionFilter) return defaultColor;
+                                return lbl === selectedRegionFilter ? defaultColor : dimmedColor;
+                            });
+                        });
+                        regionChartContext.update();
+                    }
+
+                    if (complianceChartContext) {
+                        const defaultColor = '#73c2fb';
+                        const dimmedColor = 'rgba(115, 194, 251, 0.35)';
+                        
+                        complianceChartContext.data.datasets[0].backgroundColor = complianceChartContext.data.labels.map(lbl => {
+                            if (!selectedRegionFilter) return defaultColor;
+                            return lbl === selectedRegionFilter ? defaultColor : dimmedColor;
+                        });
+                        complianceChartContext.update();
+                    }
+
                     renderTableRowsOnly(); 
                 }
             };
@@ -572,18 +643,18 @@
                         { 
                             label: 'Planned', 
                             data: regionPlannedValues, 
-                            backgroundColor: '#64748b', 
+                            backgroundColor: regionLabels.map(lbl => (!selectedRegionFilter || lbl === selectedRegionFilter) ? '#64748b' : 'rgba(100, 116, 139, 0.35)'), 
                             borderRadius: 4,
-                            maxBarThickness: 35,
+                            maxBarThickness: 32,
                             categoryPercentage: 0.8,
                             barPercentage: 1.0
                         },
                         { 
                             label: 'Actual Done', 
                             data: regionDoneValues, 
-                            backgroundColor: '#48d1cc', 
+                            backgroundColor: regionLabels.map(lbl => (!selectedRegionFilter || lbl === selectedRegionFilter) ? '#48d1cc' : 'rgba(72, 209, 204, 0.35)'), 
                             borderRadius: 4,
-                            maxBarThickness: 35,
+                            maxBarThickness: 32,
                             categoryPercentage: 0.8,
                             barPercentage: 1.0
                         }
@@ -621,7 +692,13 @@
                 type: 'bar',
                 data: {
                     labels: regionLabels,
-                    datasets: [{ label: 'Compliance Rate (%)', data: regionRatePercentages, backgroundColor: '#73c2fb', borderRadius: 4, barThickness: 50 }]
+                    datasets: [{ 
+                        label: 'Compliance Rate (%)', 
+                        data: regionRatePercentages, 
+                        backgroundColor: regionLabels.map(lbl => (!selectedRegionFilter || lbl === selectedRegionFilter) ? '#73c2fb' : 'rgba(115, 194, 251, 0.35)'), 
+                        borderRadius: 4, 
+                        barThickness: 50 
+                    }]
                 },
                 options: {
                     responsive: true,
@@ -647,6 +724,8 @@
             });
 
             const rcaTallies = {};
+            let totalMissedPool = 0;
+            
             filteredSet.forEach(item => {
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
                 let rawRca = item.rca_on_non_compliance || "";
@@ -654,6 +733,7 @@
                 if (cleanStatus !== "DONE") {
                     const reason = (rawRca.trim() === "" || rawRca.trim() === "-") ? "Pending Review" : rawRca.trim();
                     rcaTallies[reason] = (rcaTallies[reason] || 0) + 1;
+                    totalMissedPool++;
                 }
             });
 
@@ -679,6 +759,16 @@
                         legend: { 
                             position: 'right', 
                             labels: { color: '#94a3b8', boxWidth: 8, font: { size: 9 } } 
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (!hasMissedPms) return context.label;
+                                    const value = context.raw;
+                                    const percentage = totalMissedPool > 0 ? ((value / totalMissedPool) * 100).toFixed(1) : 0;
+                                    return ` ${context.label}: ${value} (${percentage}%)`;
+                                }
+                            }
                         },
                         datalabels: {
                             display: hasMissedPms,  
@@ -897,7 +987,7 @@
             });
         }
 
-        window.onload = fetchLiveSheetData;
+        window.onload = () => fetchLiveSheetData(false);
     </script>
 </body>
 </html>
