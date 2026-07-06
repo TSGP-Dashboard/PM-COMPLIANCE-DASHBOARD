@@ -180,7 +180,7 @@
 
         function getCustomWeekDateBounds(weekNumber) {
             const anchorWeek = 25;
-            const anchorStart = new Date(Date.UTC(2020, 5, 20)); // June 20, 2020 (Saturday)
+            const anchorStart = new Date(Date.UTC(2020, 5, 20)); 
             
             const weeksDifference = weekNumber - anchorWeek;
             const daysOffset = weeksDifference * 7;
@@ -189,7 +189,7 @@
             startDate.setUTCDate(startDate.getUTCDate() + daysOffset);
             
             const endDate = new Date(startDate.getTime());
-            endDate.setUTCDate(endDate.getUTCDate() + 6); // End on Friday
+            endDate.setUTCDate(endDate.getUTCDate() + 6); 
             
             return { start: startDate, end: endDate };
         }
@@ -273,11 +273,11 @@
                 displayBadge.classList.remove('hidden');
             } 
             else if (currentTimelineMode === 'YTD') {
-                const upToWeekBoundary = parseInt(selectionValue, 10);
+                const upToWeek = parseInt(selectionValue, 10);
                 const minWeek = Math.min(...uniqueWeeksChronological);
                 
                 const startBounds = getCustomWeekDateBounds(minWeek);
-                const endBounds = getCustomWeekDateBounds(upToWeekBoundary);
+                const endBounds = getCustomWeekDateBounds(upToWeek);
                 
                 const startStr = startBounds.start.toLocaleDateString('en-US', options);
                 const endStr = endBounds.end.toLocaleDateString('en-US', options);
@@ -524,7 +524,7 @@
 
             let maxCount = -1, minCount = 999999;
             let highestReg = 'N/A', lowestReg = 'N/A';
-            let globalMaxBarValue = 0;
+            let globalMaxBarHeight = 0;
 
             discreteRegions.forEach(reg => {
                 const doneCount = regionDoneCounts[reg];
@@ -536,8 +536,8 @@
                 regionDoneValues.push(doneCount);
                 regionRatePercentages.push(complianceRate);
 
-                if (totalPlanned > globalMaxBarValue) globalMaxBarValue = totalPlanned;
-                if (doneCount > globalMaxBarValue) globalMaxBarValue = doneCount;
+                if (totalPlanned > globalMaxBarHeight) globalMaxBarHeight = totalPlanned;
+                if (doneCount > globalMaxBarHeight) globalMaxBarHeight = doneCount;
 
                 if (doneCount > maxCount) { maxCount = doneCount; highestReg = reg; }
                 if (doneCount < minCount) { minCount = doneCount; lowestReg = reg; }
@@ -610,7 +610,7 @@
                         }
                     },
                     scales: {  
-                        y: { beginAtZero: true, suggestedMax: globalMaxBarValue + 3, grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 1, precision: 0 } },  
+                        y: { beginAtZero: true, suggestedMax: globalMaxBarHeight + 3, grid: { color: '#334155' }, ticks: { color: '#94a3b8', stepSize: 1, precision: 0 } },  
                         x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 }, maxRotation: 45, minRotation: 45 } }  
                     }
                 }
