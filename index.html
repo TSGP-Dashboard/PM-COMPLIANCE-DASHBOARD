@@ -18,9 +18,9 @@
         
         <div class="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto self-stretch sm:self-auto">
             <div class="flex bg-slate-950/50 p-0.5 rounded-lg border border-slate-700 text-[11px] font-semibold w-full sm:w-auto justify-between sm:justify-start">
-                <button id="timeframeWEEK" onclick="switchTimeframeMode('WEEK')", class="px-3 py-1 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center">Weekly</button>
-                <button id="timeframeMONTH" onclick="switchTimeframeMode('MONTH')", class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">Monthly</button>
-                <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')", class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">YTD</button>
+                <button id="timeframeWEEK" onclick="switchTimeframeMode('WEEK')" class="px-3 py-1 rounded-md transition-all cursor-pointer bg-blue-500 text-white font-bold shadow flex-1 sm:flex-none text-center">Weekly</button>
+                <button id="timeframeMONTH" onclick="switchTimeframeMode('MONTH')" class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">Monthly</button>
+                <button id="timeframeYTD" onclick="switchTimeframeMode('YTD')" class="px-3 py-1 rounded-md text-slate-400 hover:text-slate-200 transition-all cursor-pointer flex-1 sm:flex-none text-center">YTD</button>
             </div>
 
             <div class="flex items-center flex-wrap gap-2 bg-slate-900/60 p-1 rounded-lg border border-slate-700 w-full sm:w-auto">
@@ -56,7 +56,7 @@
                 <h3 id="highestRegion" class="text-sm font-bold text-emerald-400 mt-0.5">Calculating...</h3>
             </div>
             <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 shadow">
-                <p class="text-[10px] font-medium uppercase tracking-wider text-slate-400">Lowest Completed Region</p>
+                <p class="text-[10px] font-medium uppercase tracking-wider text-slate-400">Lowest Compliance Region</p>
                 <h3 id="lowestRegion" class="text-sm font-bold text-rose-400 mt-0.5">Calculating...</h3>
             </div>
             <div class="bg-slate-800 p-3 rounded-lg border border-slate-700 shadow">
@@ -565,7 +565,7 @@
             const regionDoneValues = [];
             const regionRatePercentages = [];
 
-            let maxCount = -1, minCount = 999999;
+            let maxCount = -1, minRate = 999;
             let highestReg = 'N/A', lowestReg = 'N/A';
             let globalMaxBarHeight = 0;
 
@@ -583,13 +583,17 @@
                 if (doneCount > globalMaxBarHeight) globalMaxBarHeight = doneCount;
 
                 if (doneCount > maxCount) { maxCount = doneCount; highestReg = reg; }
-                if (doneCount < minCount) { minCount = doneCount; lowestReg = reg; }
+                
+                // Track region with the lowest compliance rate percent instead of lowest raw counts
+                if (complianceRate < minRate) { 
+                    minRate = complianceRate; 
+                    lowestReg = reg; 
+                }
             });
 
             document.getElementById('highestRegion').innerText = maxCount > 0 ? `${highestReg} (${maxCount} Done)` : '0 Done Found';
-            document.getElementById('lowestRegion').innerText = filteredSet.length > 0 ? `${lowestReg} (${minCount === 999999 ? 0 : minCount} Done)` : '0 Done Found';
+            document.getElementById('lowestRegion').innerText = filteredSet.length > 0 ? `${lowestReg} (${minRate}% Rate)` : '0% Rate Found';
 
-            // Click interaction with visual selection highlighting
             const chartClickHandler = function(event, activeElements, chartInstance) {
                 if (activeElements && activeElements.length > 0) {
                     const dataIndex = activeElements[0].index;
@@ -604,7 +608,6 @@
                         document.getElementById('activeFilterIndicator').classList.remove('hidden');
                     }
                     
-                    // Apply dimming logic dynamically on all regions
                     if (regionChartContext) {
                         regionChartContext.data.datasets.forEach(ds => {
                             const isPlanned = ds.label === 'Planned';
@@ -645,7 +648,7 @@
                             data: regionPlannedValues, 
                             backgroundColor: regionLabels.map(lbl => (!selectedRegionFilter || lbl === selectedRegionFilter) ? '#64748b' : 'rgba(100, 116, 139, 0.35)'), 
                             borderRadius: 4,
-                            maxBarThickness: 40,
+                            maxBarThickness: 32,
                             categoryPercentage: 0.8,
                             barPercentage: 1.0
                         },
@@ -654,7 +657,7 @@
                             data: regionDoneValues, 
                             backgroundColor: regionLabels.map(lbl => (!selectedRegionFilter || lbl === selectedRegionFilter) ? '#48d1cc' : 'rgba(72, 209, 204, 0.35)'), 
                             borderRadius: 4,
-                            maxBarThickness: 40,
+                            maxBarThickness: 32,
                             categoryPercentage: 0.8,
                             barPercentage: 1.0
                         }
@@ -748,7 +751,7 @@
                     labels: rcaLabels.length ? rcaLabels : ['100% Operational Compliance'],
                     datasets: [{ 
                         data: rcaDataValues.length ? rcaDataValues : [1], 
-                        backgroundColor: rcaDataValues.length ? ['#2979ff', '#fff913', '#fa8072', '#f2efea', '#85bb65', '#ffb6c1','#ff6347', '#dda0dd', '#00ff00', '#7fffd4', '#f0e68c', '#008080','#a70d2a' ] : ['#1e293b'], 
+                        backgroundColor: rcaDataValues.length ? ['#2979ff', '#fff913', '#fa8072', '#f2efea', '#85bb65', '#ffb6c1','#ff6347', '#dda0dd', '#00ff00', '#7fffd4', '#f0e68c', '#008080' ] : ['#1e293b'], 
                         borderWidth: 0 
                     }]
                 },
