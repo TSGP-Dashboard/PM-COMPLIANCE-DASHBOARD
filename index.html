@@ -662,7 +662,7 @@
                             data: regionPlannedValues, 
                             backgroundColor: regionLabels.map(lbl => (!selectedRegionFilter || lbl === selectedRegionFilter) ? '#64748b' : 'rgba(100, 116, 139, 0.35)'), 
                             borderRadius: 4,
-                            maxBarThickness: 32,
+                            maxBarThickness: 35,
                             categoryPercentage: 0.8,
                             barPercentage: 1.0
                         },
@@ -671,7 +671,7 @@
                             data: regionDoneValues, 
                             backgroundColor: regionLabels.map(lbl => (!selectedRegionFilter || lbl === selectedRegionFilter) ? '#48d1cc' : 'rgba(72, 209, 204, 0.35)'), 
                             borderRadius: 4,
-                            maxBarThickness: 32,
+                            maxBarThickness: 35,
                             categoryPercentage: 0.8,
                             barPercentage: 1.0
                         }
@@ -714,7 +714,7 @@
                         data: regionRatePercentages, 
                         backgroundColor: regionLabels.map(lbl => (!selectedRegionFilter || lbl === selectedRegionFilter) ? '#73c2fb' : 'rgba(115, 194, 251, 0.35)'), 
                         borderRadius: 4, 
-                        barThickness: 50 
+                        barThickness: 50
                     }]
                 },
                 options: {
