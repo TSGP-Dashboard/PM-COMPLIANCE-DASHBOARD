@@ -171,6 +171,9 @@
         let currentTimelineMode = 'WEEK'; 
         let isSyncing = false;
         
+        // Define strictly enforced fixed order layout for matching/filtering
+        const fixedRegionOrder = ["REGION X", "REGION XI", "REGION XIII", "SV"];
+
         const monthlyBoundariesMap = [
             { name: "January", weeks: [1, 2, 3, 4] },
             { name: "February", weeks: [5, 6, 7, 8] },
@@ -185,6 +188,17 @@
             { name: "November", weeks: [44, 45, 46, 47] },
             { name: "December", weeks: [48, 49, 50, 51, 52] }
         ];
+
+        // Normalization utility to clean loose strings coming from DB cells safely
+        function normalizeRegionName(rawString) {
+            if (!rawString) return "";
+            const clean = rawString.trim().toUpperCase();
+            if (clean === "X" || clean === "REGION X") return "REGION X";
+            if (clean === "XI" || clean === "REGION XI") return "REGION XI";
+            if (clean === "XIII" || clean === "REGION XIII") return "REGION XIII";
+            if (clean === "SV") return "SV";
+            return clean;
+        }
 
         function getCustomWeekDateBounds(weekNumber) {
             const anchorWeek = 25;
@@ -539,17 +553,17 @@
 
             generateContextualTrendChart(selectorVal);
 
-            const discreteRegions = [...new Set(filteredSet.map(row => row.region ? row.region.trim() : ""))].filter(Boolean);
             const regionDoneCounts = {};
             const regionTotalPlanned = {};
             
-            discreteRegions.forEach(reg => { 
+            // Setup dictionary template structured on the hardcoded arrangement configuration
+            fixedRegionOrder.forEach(reg => { 
                 regionDoneCounts[reg] = 0; 
                 regionTotalPlanned[reg] = 0;
             });
 
             filteredSet.forEach(item => {
-                const cleanRegion = item.region ? item.region.trim() : "";
+                const cleanRegion = normalizeRegionName(item.region);
                 const cleanStatus = item.status ? item.status.trim().toUpperCase() : "";
 
                 if (regionTotalPlanned[cleanRegion] !== undefined) {
@@ -569,7 +583,8 @@
             let highestReg = 'N/A', lowestReg = 'N/A';
             let globalMaxBarHeight = 0;
 
-            discreteRegions.forEach(reg => {
+            // Sequential push operations following the absolute fixed blueprint order grid layout
+            fixedRegionOrder.forEach(reg => {
                 const doneCount = regionDoneCounts[reg];
                 const totalPlanned = regionTotalPlanned[reg];
                 const complianceRate = totalPlanned > 0 ? Math.round((doneCount / totalPlanned) * 100) : 0;
@@ -584,7 +599,6 @@
 
                 if (doneCount > maxCount) { maxCount = doneCount; highestReg = reg; }
                 
-                // Track region with the lowest compliance rate percent instead of lowest raw counts
                 if (complianceRate < minRate) { 
                     minRate = complianceRate; 
                     lowestReg = reg; 
@@ -792,7 +806,7 @@
             let results = getTimelineBaseDataset();
 
             if (selectedRegionFilter !== null) {
-                results = results.filter(row => row.region && row.region.trim() === selectedRegionFilter);
+                results = results.filter(row => normalizeRegionName(row.region) === selectedRegionFilter);
             }
 
             if (activeStatusTab === 'DONE') {
